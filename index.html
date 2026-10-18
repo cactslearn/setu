@@ -469,10 +469,15 @@
               <button id="toggleMoreOptionsBtn" class="meet-ctrl-btn more-options-btn" style="display: none;" title="More options" aria-label="More options">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="1"></circle><circle cx="12" cy="5" r="1"></circle><circle cx="12" cy="19" r="1"></circle></svg>
               </button>
-              <div id="moreOptionsMenu" class="device-select-popup" style="right: 0; left: auto;">
-                <button class="menu-item" onclick="document.getElementById('toggleWhiteboardBtn').click()">Whiteboard</button>
-                <button class="menu-item" onclick="document.getElementById('toggleDiagnosticsBtn').click()">Diagnostics</button>
-                <button class="menu-item" onclick="document.getElementById('toggleNotesDrawerBtn').click()">Meeting Notes</button>
+              <div id="moreOptionsMenu" class="device-select-popup" style="right: 0; left: auto; bottom: calc(100% + 12px); min-width: 210px;">
+                <button class="menu-item" onclick="document.getElementById('togglePeopleDrawerBtn')?.click()">People (<span id="morePeopleCountBadge">2</span>)</button>
+                <button class="menu-item" onclick="document.getElementById('toggleFileDrawerBtn')?.click()">Send &amp; Receive Files</button>
+                <button class="menu-item" onclick="document.getElementById('toggleWhiteboardBtn')?.click()">Interactive Whiteboard</button>
+                <button class="menu-item" onclick="document.getElementById('toggleNotesDrawerBtn')?.click()">Meeting Notes</button>
+                <button class="menu-item" onclick="document.getElementById('screenShareBtn')?.click()">Share Screen</button>
+                <button class="menu-item" onclick="document.getElementById('recordToggleBtn')?.click()">Record Meeting</button>
+                <button class="menu-item" onclick="document.getElementById('toggleDiagnosticsBtn')?.click()">Network Diagnostics</button>
+                <button class="menu-item" onclick="document.getElementById('openSettingsBtn')?.click()">Settings</button>
               </div>
             </div>
 

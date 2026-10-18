@@ -1221,6 +1221,8 @@ class MeetingController {
 
     if (countBadge) countBadge.textContent = '2';
     if (drawerCount) drawerCount.textContent = '2';
+    const moreDrawerCount = document.getElementById('morePeopleCountBadge');
+    if (moreDrawerCount) moreDrawerCount.textContent = '2';
 
     const localInitial = (this.localDisplayName || 'Y').charAt(0).toUpperCase();
     const remoteInitial = (this.remotePeerName || 'P').charAt(0).toUpperCase();

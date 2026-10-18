@@ -1,0 +1,12 @@
+Setu P2P - Open-Source Serverless Peer-to-Peer Communication Platform
+Copyright 2026 Setu P2P Contributors
+
+This product includes software developed under the Apache License 2.0.
+
+Third-Party Components & Attributions:
+- WebRTC (W3C standard browser API): standard encrypted peer transport.
+- WebCrypto API: browser-native cryptographic primitives (SHA-256, PBKDF2, AES-GCM).
+- Google Fonts (Plus Jakarta Sans, JetBrains Mono): Open Font License (OFL).
+- Public STUN Servers:
+  - Google Public STUN: stun.l.google.com:19302 (Used for NAT traversal candidate discovery).
+  - Cloudflare STUN: stun.cloudflare.com:3478.

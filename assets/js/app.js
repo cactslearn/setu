@@ -309,32 +309,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   });
 
-  // 6. Presence Menu Dropdown
-  const presenceBtn = document.getElementById('presenceDropdownBtn');
-  const presenceMenu = document.getElementById('presenceMenu');
-  if (presenceBtn && presenceMenu) {
-    presenceBtn.addEventListener('click', (e) => {
-      e.stopPropagation();
-      presenceMenu.classList.toggle('open');
-    });
-
-    document.querySelectorAll('.presence-item').forEach(option => {
-      option.addEventListener('click', () => {
-        const status = option.getAttribute('data-status');
-        window.setuPresence.setStatus(status);
-        presenceMenu.classList.remove('open');
-      });
-    });
-
-    window.addEventListener('click', () => presenceMenu.classList.remove('open'));
-  }
-
-  window.setuPresence.onLocalStatusChange = (status) => {
-    const dot = document.getElementById('userStatusDot');
-    const label = document.getElementById('userStatusLabel');
-    if (dot) dot.className = `status-dot status-${status}`;
-    if (label) label.textContent = status.charAt(0).toUpperCase() + status.slice(1);
-  };
 
   // 7. Theme Toggle (Dark / Light)
   const themeToggleBtn = document.getElementById('themeToggleBtn');

@@ -248,11 +248,28 @@ class MeetingController {
           const isOpening = qrBox.style.display === 'none';
           qrBox.style.display = isOpening ? 'flex' : 'none';
           toggleQrBtn.textContent = isOpening ? 'Hide QR' : 'Show QR';
-          if (isOpening && qrCanvas && window.setuQR) {
-            window.setuQR.renderQR(qrCanvas, link);
+          if (isOpening) {
+            if (qrCanvas && window.setuQR) {
+              window.setuQR.renderQR(qrCanvas, link);
+            }
+            setTimeout(() => {
+              if (inviteCard) inviteCard.scrollTo({ top: inviteCard.scrollHeight, behavior: 'smooth' });
+            }, 60);
           }
         }
       };
+    }
+
+    const offlineDetails = document.getElementById('inMeetingOfflineDetails');
+    if (offlineDetails && !offlineDetails._scrollBound) {
+      offlineDetails._scrollBound = true;
+      offlineDetails.addEventListener('toggle', () => {
+        if (offlineDetails.open && inviteCard) {
+          setTimeout(() => {
+            inviteCard.scrollTo({ top: inviteCard.scrollHeight, behavior: 'smooth' });
+          }, 60);
+        }
+      });
     }
 
     // Connect participant reply (Serverless P2P exchange)

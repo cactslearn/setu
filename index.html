@@ -28,29 +28,6 @@
     </div>
 
     <div class="header-tools">
-      <!-- Presence Dropdown -->
-      <div class="presence-box">
-        <button id="presenceDropdownBtn" class="presence-btn" aria-haspopup="true" aria-expanded="false" title="Set Availability Status">
-          <span id="userStatusDot" class="status-dot status-available"></span>
-          <span id="userStatusLabel">Available</span>
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"></polyline></svg>
-        </button>
-        <div id="presenceMenu" class="presence-menu" role="menu">
-          <button class="presence-item" data-status="available" role="menuitem">
-            <span class="status-dot status-available"></span> Available
-          </button>
-          <button class="presence-item" data-status="away" role="menuitem">
-            <span class="status-dot status-away"></span> Away
-          </button>
-          <button class="presence-item" data-status="busy" role="menuitem">
-            <span class="status-dot status-busy"></span> Busy
-          </button>
-          <button class="presence-item" data-status="invisible" role="menuitem">
-            <span class="status-dot status-invisible"></span> Invisible
-          </button>
-        </div>
-      </div>
-
       <!-- Theme Switcher -->
       <button id="themeToggleBtn" class="tool-icon-btn" title="Toggle Theme" aria-label="Toggle theme">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -365,15 +342,17 @@
                 <div id="inMeetingQrBox" style="display: none; justify-content: center; background: #ffffff; padding: 0.75rem; border-radius: var(--radius-sm); margin-bottom: 0.5rem;">
                   <canvas id="inMeetingQrCanvas" style="max-width: 140px; max-height: 140px;"></canvas>
                 </div>
-                <div class="invite-reply-section" style="margin-top: 0;">
+                <div class="invite-reply-section" style="margin-top: 0; padding-bottom: 0.75rem;">
                   <div style="font-size: 0.72rem; color: var(--text-muted); margin-bottom: 0.3rem;">Manual Reply Code (Only needed if offline):</div>
-                  <div style="display: flex; gap: 0.4rem;">
+                  <div style="display: flex; gap: 0.4rem; padding-bottom: 0.4rem;">
                     <input type="text" id="inMeetingReplyInput" class="select-input" placeholder="Paste participant reply code..." style="font-size: 0.75rem; padding: 0.4rem 0.5rem;">
                     <button id="inMeetingApplyReplyBtn" class="btn btn-secondary btn-sm" style="white-space: nowrap;">Connect</button>
                   </div>
                 </div>
               </div>
             </details>
+            <!-- Bottom scroll breathing space -->
+            <div style="height: 14px; flex-shrink: 0;" aria-hidden="true"></div>
           </div>
 
           <!-- Docked Bottom Control Bar (Universal Visibility Across All Screens) -->

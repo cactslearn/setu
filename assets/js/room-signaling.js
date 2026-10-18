@@ -9,7 +9,8 @@ class RoomSignalingService {
   constructor() {
     this.brokerUrls = [
       'wss://broker.emqx.io:8084/mqtt',
-      'wss://broker.hivemq.com:8884/mqtt'
+      'wss://broker.hivemq.com:8884/mqtt',
+      'wss://mqtt.tyckr.io:8081'
     ];
     this.currentBrokerIdx = 0;
     this.ws = null;
@@ -220,7 +221,7 @@ class RoomSignalingService {
           try { this.ws.close(); } catch (_) {}
           this.handleConnectError(new Error('Connection timed out to ' + brokerUrl), resolve, reject);
         }
-      }, 7000);
+      }, 8500);
 
       this.ws.onopen = () => {
         // Send MQTT 3.1.1 CONNECT packet
@@ -290,7 +291,7 @@ class RoomSignalingService {
       this.connect().then(resolve).catch(reject);
     } else {
       this.currentBrokerIdx = 0; // reset for next attempt
-      reject(new Error('All ephemeral signaling brokers unreachable. Please verify network or use manual offline code.'));
+      reject(new Error('Signaling network unreachable (mobile data / Wi-Fi may block ports 8084/8884). Try Wi-Fi, or use "Scan QR or use offline code".'));
     }
   }
 

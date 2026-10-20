@@ -366,7 +366,7 @@ class StorageEngine {
       enabled: !!settings.enabled,
       endpoint: (settings.endpoint || '').trim(),
       secretKey: (settings.secretKey !== undefined ? settings.secretKey : current.secretKey || '').trim(),
-      pollIntervalSec: Math.max(1, Math.min(10, parseInt(settings.pollIntervalSec, 10) || 3))
+      pollIntervalSec: Math.max(1, Math.min(60, parseInt(settings.pollIntervalSec, 10) || 3))
     };
     return await this.setSetting('api_signaling_settings', updated);
   }

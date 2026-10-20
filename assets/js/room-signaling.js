@@ -677,7 +677,7 @@ class RoomSignalingService {
     const cleanUrl = endpoint.trim();
     const formattedCode = this.formatRoomCode(roomCode);
     const cleanCode = this.normalizeRoomCode(roomCode);
-    const intervalMs = Math.max(1000, Math.min(10000, (pollIntervalSec || 3) * 1000));
+    const intervalMs = Math.max(1000, Math.min(60000, (pollIntervalSec || 3) * 1000));
 
     if (onStatusUpdate) onStatusUpdate(`Checking API every ${intervalMs / 1000}s for participant reply...`);
 

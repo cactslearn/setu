@@ -142,6 +142,10 @@ class MeetingController {
   onPeerConnected() {
     this.isPeerConnected = true;
 
+    if (window.setuRoomSignaling && window.setuRoomSignaling.stopApiPolling) {
+      window.setuRoomSignaling.stopApiPolling();
+    }
+
     const statusDot = document.getElementById('connStatusDot');
     const statusText = document.getElementById('connStatusText');
     if (statusDot) statusDot.className = 'status-dot status-available';
@@ -460,8 +464,11 @@ class MeetingController {
       }
     } catch (e) {}
 
-    // 4. Close WebRTC peer connection and streams
+    // 4. Close WebRTC peer connection, streams, and signaling timers
     try {
+      if (window.setuRoomSignaling && window.setuRoomSignaling.stopApiPolling) {
+        window.setuRoomSignaling.stopApiPolling();
+      }
       if (window.setuWebRTC) {
         window.setuWebRTC.close();
       }

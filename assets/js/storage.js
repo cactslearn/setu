@@ -349,6 +349,28 @@ class StorageEngine {
     return await this.saveUserProfile(profile);
   }
 
+  // --- Custom API Gateway Settings ---
+  async getApiSignalingSettings() {
+    return await this.getSetting('api_signaling_settings', {
+      enabled: false,
+      endpoint: '',
+      secretKey: '',
+      pollIntervalSec: 3
+    });
+  }
+
+  async saveApiSignalingSettings(settings) {
+    const current = await this.getApiSignalingSettings();
+    const updated = {
+      ...current,
+      enabled: !!settings.enabled,
+      endpoint: (settings.endpoint || '').trim(),
+      secretKey: (settings.secretKey !== undefined ? settings.secretKey : current.secretKey || '').trim(),
+      pollIntervalSec: Math.max(1, Math.min(10, parseInt(settings.pollIntervalSec, 10) || 3))
+    };
+    return await this.setSetting('api_signaling_settings', updated);
+  }
+
   // --- Meeting History Archive ---
   _getFallbackHistory() {
     try {

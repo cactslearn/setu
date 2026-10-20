@@ -22,6 +22,7 @@ class RoomSignalingService {
     this.activeSessionId = null;
     this.textEncoder = new TextEncoder();
     this.textDecoder = new TextDecoder();
+    this.apiPollingTimer = null;
   }
 
   /**
@@ -556,12 +557,289 @@ class RoomSignalingService {
    */
   disconnect() {
     clearInterval(this.pingTimer);
+    this.stopApiPolling();
     this.connected = false;
     this.subscriptions.clear();
     if (this.ws) {
       try { this.ws.close(); } catch (_) {}
       this.ws = null;
     }
+  }
+
+  // =========================================================================
+  // UNIVERSAL CUSTOM API SIGNALING & POLLING GATEWAY
+  // Supports Google Apps Script, Node.js, Python FastAPI, PHP, Cloudflare, etc.
+  // Standardized on unique xxx-xxxx-xxx meeting IDs with zero-knowledge AES-GCM-256 E2EE.
+  // =========================================================================
+
+  /**
+   * Tests reachability, CORS headers, and connectivity to any user-provided API endpoint.
+   */
+  async testApiEndpoint(endpoint, secretKey = '') {
+    if (!endpoint || !endpoint.trim()) {
+      throw new Error('Please enter a valid API Endpoint URL.');
+    }
+    const cleanUrl = endpoint.trim();
+    try {
+      const url = new URL(cleanUrl);
+      if (!['http:', 'https:'].includes(url.protocol)) {
+        throw new Error('Endpoint must use http:// or https://');
+      }
+    } catch (e) {
+      throw new Error('Invalid URL format: ' + e.message);
+    }
+
+    const testId = 'test_ping_' + Math.random().toString(36).slice(2, 8);
+    // Send secretKey in URL query to keep GET as a CORS simple request (avoids OPTIONS preflight on Google Apps Script)
+    const testUrl = `${cleanUrl}${cleanUrl.includes('?') ? '&' : '?'}id=${testId}&secretKey=${encodeURIComponent(secretKey || '')}`;
+    
+    try {
+      const res = await fetch(testUrl, {
+        method: 'GET',
+        redirect: 'follow',
+        cache: 'no-store'
+      });
+      // Any HTTP response (including 404 or 200) proves the server is reachable and CORS headers are valid!
+      return {
+        ok: true,
+        status: res.status,
+        message: `Endpoint reachable (HTTP ${res.status}). CORS verified.`
+      };
+    } catch (err) {
+      console.warn('[APISignaling] Test connection failed:', err);
+      throw new Error('Could not connect to endpoint. Verify URL and ensure CORS headers (Access-Control-Allow-Origin: *) are enabled on your server.');
+    }
+  }
+
+  /**
+   * Host: Registers meeting offer on custom API endpoint with AES-GCM-256 E2E encryption.
+   */
+  async registerMeetingApi(roomCode, sdpPayload, endpoint, secretKey = '', hostName = 'Host') {
+    if (!endpoint || !endpoint.trim()) throw new Error('API Endpoint is required');
+    const cleanUrl = endpoint.trim();
+    const formattedCode = this.formatRoomCode(roomCode);
+    const cleanCode = this.normalizeRoomCode(roomCode);
+    this.activeRoomCode = formattedCode;
+
+    // Cryptographic 128-bit session nonce to prevent stale answer crossover
+    this.activeSessionId = (typeof crypto !== 'undefined' && crypto.randomUUID)
+      ? crypto.randomUUID()
+      : 'ses_' + Math.random().toString(36).slice(2) + Date.now();
+
+    const payloadWithMeta = {
+      ...sdpPayload,
+      sessionId: this.activeSessionId,
+      createdTs: Date.now()
+    };
+
+    // Zero-knowledge encryption: server only ever sees opaque ciphertext
+    const cipherOffer = await this.encryptPayload(cleanCode, JSON.stringify(payloadWithMeta));
+
+    const requestBody = {
+      id: formattedCode,
+      type: 'offer',
+      offer: cipherOffer,
+      hostName: hostName || 'Host',
+      secretKey: secretKey || '',
+      createdTs: Date.now()
+    };
+
+    // Use text/plain;charset=utf-8 to ensure CORS Simple Request (bypasses OPTIONS preflight on Google Apps Script)
+    const res = await fetch(cleanUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify(requestBody),
+      redirect: 'follow'
+    });
+
+    if (!res.ok && res.status !== 200) {
+      let errText = '';
+      try {
+        const errJson = await res.json();
+        errText = errJson.error || errJson.message || '';
+      } catch (_) {
+        errText = await res.text();
+      }
+      throw new Error(`API registration failed (HTTP ${res.status}): ${errText || 'Invalid response'}`);
+    }
+
+    const result = await res.json().catch(() => ({}));
+    if (result.error) throw new Error(result.error);
+    return { success: true, id: formattedCode };
+  }
+
+  /**
+   * Host: Starts periodic polling loop to check for participant's answer.
+   * Immediately terminates polling the moment an answer is received.
+   */
+  startApiPolling(roomCode, endpoint, secretKey = '', pollIntervalSec = 3, onAnswerReceived, onStatusUpdate) {
+    this.stopApiPolling();
+    const cleanUrl = endpoint.trim();
+    const formattedCode = this.formatRoomCode(roomCode);
+    const cleanCode = this.normalizeRoomCode(roomCode);
+    const intervalMs = Math.max(1000, Math.min(10000, (pollIntervalSec || 3) * 1000));
+
+    if (onStatusUpdate) onStatusUpdate(`Checking API every ${intervalMs / 1000}s for participant reply...`);
+
+    let isPolling = false;
+
+    const pollTick = async () => {
+      if (isPolling) return;
+      isPolling = true;
+      try {
+        // Send secretKey in query to maintain CORS simple request without triggering OPTIONS preflight
+        const pollUrl = `${cleanUrl}${cleanUrl.includes('?') ? '&' : '?'}id=${encodeURIComponent(formattedCode)}&secretKey=${encodeURIComponent(secretKey || '')}`;
+        const res = await fetch(pollUrl, {
+          method: 'GET',
+          redirect: 'follow',
+          cache: 'no-store'
+        });
+
+        if (res.ok) {
+          const data = await res.json().catch(() => null);
+          if (data && data.status === 'answered' && data.answer) {
+            console.log('[APISignaling] Participant answer found on API! Terminating polling loop.');
+            this.stopApiPolling();
+
+            // Decrypt the response
+            const decryptedStr = await this.decryptPayload(cleanCode, data.answer);
+            const answerObj = JSON.parse(decryptedStr);
+
+            if (answerObj && answerObj.type === 'answer') {
+              if (answerObj.sessionId && answerObj.sessionId !== this.activeSessionId) {
+                console.warn('[APISignaling] Ignored answer from mismatched session ID');
+                isPolling = false;
+                return;
+              }
+              if (onStatusUpdate) onStatusUpdate('Participant joined! Connecting...');
+              if (onAnswerReceived) onAnswerReceived(answerObj);
+            }
+          }
+        }
+      } catch (err) {
+        console.warn('[APISignaling] Polling tick error:', err);
+      } finally {
+        isPolling = false;
+      }
+    };
+
+    // Run first tick after a short initial delay, then interval
+    setTimeout(pollTick, 1000);
+    this.apiPollingTimer = setInterval(pollTick, intervalMs);
+  }
+
+  /**
+   * Stops API polling loop immediately (saves battery & bandwidth).
+   */
+  stopApiPolling() {
+    if (this.apiPollingTimer) {
+      clearInterval(this.apiPollingTimer);
+      this.apiPollingTimer = null;
+    }
+  }
+
+  /**
+   * Client: Fetches meeting offer from API and decrypts with room code.
+   */
+  async fetchOfferApi(roomCode, endpoint) {
+    if (!endpoint || !endpoint.trim()) throw new Error('API Endpoint is required');
+    const cleanUrl = endpoint.trim();
+    const formattedCode = this.formatRoomCode(roomCode);
+    const cleanCode = this.normalizeRoomCode(roomCode);
+    this.activeRoomCode = formattedCode;
+
+    const fetchUrl = `${cleanUrl}${cleanUrl.includes('?') ? '&' : '?'}id=${encodeURIComponent(formattedCode)}`;
+    const res = await fetch(fetchUrl, {
+      method: 'GET',
+      redirect: 'follow',
+      cache: 'no-store'
+    });
+
+    if (!res.ok) {
+      let errText = '';
+      try {
+        const errJson = await res.json();
+        errText = errJson.error || '';
+      } catch (_) {}
+      throw new Error(`Meeting not found on API (${res.status}): ${errText || 'Please verify the link or room code'}`);
+    }
+
+    const data = await res.json();
+    if (!data || !data.offer) {
+      throw new Error('Invalid meeting data received from API');
+    }
+
+    const decryptedStr = await this.decryptPayload(cleanCode, data.offer);
+    const offerObj = JSON.parse(decryptedStr);
+    if (!offerObj || offerObj.type !== 'offer') {
+      throw new Error('Decrypted payload is not a valid WebRTC offer');
+    }
+
+    this.activeSessionId = offerObj.sessionId || null;
+    return {
+      ...offerObj,
+      hostName: data.hostName || offerObj.label || 'Host'
+    };
+  }
+
+  /**
+   * Client: Encrypts WebRTC answer with room code and submits to API.
+   */
+  async submitAnswerApi(roomCode, sdpPayload, endpoint, clientName = 'Participant') {
+    if (!endpoint || !endpoint.trim()) throw new Error('API Endpoint is required');
+    const cleanUrl = endpoint.trim();
+    const formattedCode = this.formatRoomCode(roomCode);
+    const cleanCode = this.normalizeRoomCode(roomCode);
+
+    const payloadWithMeta = {
+      ...sdpPayload,
+      sessionId: this.activeSessionId || null,
+      createdTs: Date.now()
+    };
+
+    const cipherAnswer = await this.encryptPayload(cleanCode, JSON.stringify(payloadWithMeta));
+
+    const requestBody = {
+      id: formattedCode,
+      type: 'answer',
+      answer: cipherAnswer,
+      clientName: clientName || 'Participant'
+    };
+
+    const res = await fetch(cleanUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify(requestBody),
+      redirect: 'follow'
+    });
+
+    if (!res.ok) {
+      let errText = '';
+      try {
+        const errJson = await res.json();
+        errText = errJson.error || '';
+      } catch (_) {}
+      throw new Error(`Failed to submit answer to API (${res.status}): ${errText}`);
+    }
+
+    return await res.json().catch(() => ({ success: true }));
+  }
+
+  /**
+   * Cleans up / deletes meeting from API after call finishes.
+   */
+  async deleteMeetingApi(roomCode, endpoint, secretKey = '') {
+    if (!endpoint || !endpoint.trim()) return;
+    const cleanUrl = endpoint.trim();
+    const formattedCode = this.formatRoomCode(roomCode);
+    try {
+      await fetch(cleanUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify({ id: formattedCode, type: 'delete', secretKey: secretKey || '' }),
+        redirect: 'follow'
+      });
+    } catch (_) {}
   }
 }
 

@@ -505,6 +505,99 @@ class ConnectionWizardUI {
   }
 
   /**
+   * Participant: Joins a meeting hosted via Custom API Signaling Gateway (#apiRoom=xxx-xxxx-xxx&api=...)
+   * 1. Fetches AES-GCM-256 encrypted offer from endpoint
+   * 2. Decrypts offer using the unique xxx-xxxx-xxx code
+   * 3. Creates WebRTC answer
+   * 4. Encrypts answer using the room code and submits back to endpoint
+   * 5. Enters meeting in waiting state; host's polling detects answer and completes P2P call!
+   */
+  async joinApiMeeting(roomCode, endpoint) {
+    if (!roomCode || !endpoint) {
+      if (window.showToast) window.showToast('Invalid meeting link: Missing room code or API endpoint');
+      return;
+    }
+
+    // 1. Sync global profile settings
+    await this.syncPrejoinStateFromProfile();
+
+    this.mode = 'join';
+    window.setuSharedPage.isHost = false;
+
+    // 2. Enter meeting room in waiting state
+    if (this.modal) this.modal.classList.remove('open');
+    if (window.setuMeeting) {
+      window.setuMeeting.enterMeeting();
+      window.setuMeeting.syncButtonStates();
+      window.setuMeeting.setMeetingWaitingState();
+    }
+
+    const cleanCode = window.setuRoomSignaling ? window.setuRoomSignaling.normalizeRoomCode(roomCode) : roomCode;
+    const formattedCode = window.setuRoomSignaling ? window.setuRoomSignaling.formatRoomCode(cleanCode) : roomCode;
+
+    const statusText = document.getElementById('connStatusText');
+    if (statusText) statusText.textContent = `Connecting to API gateway for meeting ${formattedCode}...`;
+
+    // 3. Acquire local media respecting mute settings
+    try {
+      await window.setuWebRTC.getLocalMedia();
+      const localVideo = document.getElementById('localVideo');
+      if (localVideo && window.setuWebRTC.localStream) {
+        localVideo.srcObject = window.setuWebRTC.localStream;
+        localVideo.play().catch(e => console.warn('localVideo play error:', e));
+      }
+      if (window.setuMeeting) {
+        window.setuMeeting.syncButtonStates();
+        window.setuMeeting.updateLocalVideoDisplay(!window.setuWebRTC.isVideoMuted);
+      }
+    } catch (e) {
+      console.warn('[JoinApiMeeting] Media capture note:', e);
+    }
+
+    let localDisplayName = 'Participant';
+    if (window.setuStorage) {
+      try {
+        const profile = await window.setuStorage.getUserProfile();
+        if (profile && profile.displayName && profile.displayName.trim()) {
+          localDisplayName = profile.displayName.trim();
+        }
+      } catch (_) {}
+    }
+
+    // 4. Retrieve offer from API
+    try {
+      if (statusText) statusText.textContent = `Retrieving meeting offer from API...`;
+      const offerObj = await window.setuRoomSignaling.fetchOfferApi(formattedCode, endpoint);
+      this.remoteSdp = offerObj.sdp;
+
+      if ((offerObj.hostName || offerObj.label) && window.setuMeeting) {
+        window.setuMeeting.setRemotePeerName(offerObj.hostName || offerObj.label);
+      }
+
+      // 5. Generate WebRTC answer
+      if (statusText) statusText.textContent = `Generating encrypted reply...`;
+      const answerDesc = await window.setuWebRTC.createAnswer(offerObj.sdp);
+      this.localSdp = answerDesc.sdp;
+
+      // 6. Submit answer back to API
+      if (statusText) statusText.textContent = `Submitting answer to API gateway...`;
+      await window.setuRoomSignaling.submitAnswerApi(
+        formattedCode,
+        { type: answerDesc.type, sdp: answerDesc.sdp, label: localDisplayName },
+        endpoint,
+        localDisplayName
+      );
+
+      if (statusText) statusText.textContent = `Answer registered! Waiting for host to connect...`;
+      if (window.showToast) window.showToast('Joined meeting! Waiting for host connection...');
+    } catch (err) {
+      console.error('[JoinApiMeeting] Error during API join:', err);
+      if (statusText) statusText.textContent = `Join failed: ${err.message}`;
+      if (window.showToast) window.showToast('Could not join API meeting: ' + err.message);
+    }
+  }
+
+  /**
    * Smart Auto-Role Room Entry ("First-Arrival Hosting"):
    * Allows both Host and Participant to enter with the exact same reusable room code or link.
    * Probes the ephemeral broker for an existing offer:
@@ -733,7 +826,22 @@ class ConnectionWizardUI {
       const cleanCode = window.setuRoomSignaling ? window.setuRoomSignaling.normalizeRoomCode(roomCode) : roomCode;
       const formattedCode = window.setuRoomSignaling ? window.setuRoomSignaling.formatRoomCode(cleanCode) : cleanCode;
 
-      const shortLink = `${window.location.origin}${window.location.pathname}#room=${cleanCode}`;
+      // Check if Custom API Signaling Gateway is enabled
+      let apiSettings = null;
+      if (window.setuStorage && window.setuStorage.getApiSignalingSettings) {
+        try {
+          apiSettings = await window.setuStorage.getApiSignalingSettings();
+        } catch (_) {}
+      }
+
+      const isApiSignaling = !!(apiSettings && apiSettings.enabled && apiSettings.endpoint && apiSettings.endpoint.trim());
+
+      let shortLink;
+      if (isApiSignaling) {
+        shortLink = `${window.location.origin}${window.location.pathname}#apiRoom=${formattedCode}&api=${encodeURIComponent(apiSettings.endpoint.trim())}`;
+      } else {
+        shortLink = `${window.location.origin}${window.location.pathname}#room=${cleanCode}`;
+      }
       this.generatedPayload = window.setuSignaling.packSessionDescription(offerDesc, hostName);
 
       // 5. Open in-room Google Meet style "Your meeting is ready" card
@@ -741,8 +849,59 @@ class ConnectionWizardUI {
         window.setuMeeting.setupInMeetingInvite(this.generatedPayload, shortLink, formattedCode);
       }
 
-      // 6. Connect to ephemeral broker & listen for participant answer automatically
-      if (window.setuRoomSignaling && cleanCode) {
+      // 6. Connect to signaling (API Gateway or Ephemeral MQTT Broker)
+      if (isApiSignaling) {
+        const endpoint = apiSettings.endpoint.trim();
+        const secretKey = apiSettings.secretKey || '';
+        const pollInterval = apiSettings.pollIntervalSec || 3;
+
+        const statusText = document.getElementById('connStatusText');
+        if (statusText) statusText.textContent = 'Registering meeting on API gateway...';
+
+        try {
+          await window.setuRoomSignaling.registerMeetingApi(
+            formattedCode,
+            { type: offerDesc.type, sdp: offerDesc.sdp, label: hostName },
+            endpoint,
+            secretKey,
+            hostName
+          );
+
+          if (statusText) statusText.textContent = `Meeting registered on API. Waiting for participant...`;
+
+          window.setuRoomSignaling.startApiPolling(
+            formattedCode,
+            endpoint,
+            secretKey,
+            pollInterval,
+            async (answerObj) => {
+              try {
+                console.log('[DirectHost/API] Participant joined! Applying answer...');
+                if (answerObj.label && window.setuMeeting) {
+                  window.setuMeeting.setRemotePeerName(answerObj.label);
+                }
+                await window.setuWebRTC.applyAnswer(answerObj.sdp);
+                if (window.setuMeeting) {
+                  window.setuMeeting.onPeerConnected();
+                }
+              } catch (err) {
+                console.error('[DirectHost/API] Error applying answer:', err);
+                if (window.showToast) window.showToast('Could not complete connection: ' + err.message);
+              }
+            },
+            (statusMsg) => {
+              const statusText = document.getElementById('connStatusText');
+              if (statusText && (!window.setuWebRTC.peerConnection || window.setuWebRTC.peerConnection.connectionState !== 'connected')) {
+                statusText.textContent = statusMsg;
+              }
+            }
+          );
+        } catch (apiErr) {
+          console.error('[DirectHost/API] Failed to register meeting on API:', apiErr);
+          if (statusText) statusText.textContent = `API Error: ${apiErr.message}`;
+          if (window.showToast) window.showToast(`API Signaling Error: ${apiErr.message}`);
+        }
+      } else if (window.setuRoomSignaling && cleanCode) {
         // Clear any previous stale offer on this reusable code before publishing new offer
         window.setuRoomSignaling.cleanupRoom(cleanCode);
 

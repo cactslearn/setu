@@ -754,6 +754,26 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
         if (settingsAvatarImg) settingsAvatarImg.style.display = 'none';
       }
+
+      // Load custom API signaling gateway settings
+      if (window.setuStorage && window.setuStorage.getApiSignalingSettings) {
+        try {
+          const apiSettings = await window.setuStorage.getApiSignalingSettings();
+          const apiEnabledCheckbox = document.getElementById('settingApiSignalingEnabled');
+          const apiEndpointInput = document.getElementById('settingApiEndpoint');
+          const apiSecretKeyInput = document.getElementById('settingApiSecretKey');
+          const apiPollIntervalInput = document.getElementById('settingApiPollInterval');
+          const apiPollIntervalVal = document.getElementById('settingApiPollIntervalVal');
+
+          if (apiEnabledCheckbox) apiEnabledCheckbox.checked = !!apiSettings.enabled;
+          if (apiEndpointInput) apiEndpointInput.value = apiSettings.endpoint || '';
+          if (apiSecretKeyInput) apiSecretKeyInput.value = apiSettings.secretKey || '';
+          if (apiPollIntervalInput) {
+            apiPollIntervalInput.value = apiSettings.pollIntervalSec || 3;
+            if (apiPollIntervalVal) apiPollIntervalVal.textContent = `${apiPollIntervalInput.value}s`;
+          }
+        } catch (_) {}
+      }
     } catch (e) {
       console.warn('Failed to load profile:', e);
     }
@@ -890,11 +910,78 @@ document.addEventListener('DOMContentLoaded', async () => {
         window.setuWebRTC.setCustomIceServers(turnServerUrl, turnUsername, turnCredential);
       }
 
+      // Save custom API signaling settings
+      if (window.setuStorage && window.setuStorage.saveApiSignalingSettings) {
+        try {
+          const apiEnabled = !!document.getElementById('settingApiSignalingEnabled')?.checked;
+          const apiEndpoint = document.getElementById('settingApiEndpoint')?.value.trim() || '';
+          const apiSecretKey = document.getElementById('settingApiSecretKey')?.value.trim() || '';
+          const apiPollInterval = parseInt(document.getElementById('settingApiPollInterval')?.value, 10) || 3;
+
+          await window.setuStorage.saveApiSignalingSettings({
+            enabled: apiEnabled,
+            endpoint: apiEndpoint,
+            secretKey: apiSecretKey,
+            pollIntervalSec: apiPollInterval
+          });
+        } catch (_) {}
+      }
+
       broadcastUserProfile();
       settingsModal?.classList.remove('open');
-      window.showToast('Profile, personal room, and relay settings saved');
+      window.showToast('Profile, personal room, and gateway settings saved');
     });
   }
+
+  // Custom API Signaling Gateway UI listeners
+  const apiPollSlider = document.getElementById('settingApiPollInterval');
+  const apiPollVal = document.getElementById('settingApiPollIntervalVal');
+  apiPollSlider?.addEventListener('input', () => {
+    if (apiPollVal) apiPollVal.textContent = `${apiPollSlider.value}s`;
+  });
+
+  const toggleSecretBtn = document.getElementById('toggleApiSecretVisibilityBtn');
+  const secretKeyInput = document.getElementById('settingApiSecretKey');
+  toggleSecretBtn?.addEventListener('click', () => {
+    if (secretKeyInput) {
+      const isPass = secretKeyInput.type === 'password';
+      secretKeyInput.type = isPass ? 'text' : 'password';
+      toggleSecretBtn.textContent = isPass ? 'Hide' : 'Show';
+    }
+  });
+
+  const testApiBtn = document.getElementById('testApiEndpointBtn');
+  const testApiStatus = document.getElementById('apiEndpointTestStatus');
+  testApiBtn?.addEventListener('click', async () => {
+    const endpoint = document.getElementById('settingApiEndpoint')?.value.trim();
+    const secretKey = document.getElementById('settingApiSecretKey')?.value.trim();
+    if (!endpoint) {
+      if (testApiStatus) {
+        testApiStatus.textContent = 'Please enter an API Endpoint URL';
+        testApiStatus.style.color = 'var(--accent-rose)';
+      }
+      return;
+    }
+    if (testApiStatus) {
+      testApiStatus.textContent = 'Testing connection & CORS...';
+      testApiStatus.style.color = 'var(--accent-blue)';
+    }
+    try {
+      if (!window.setuRoomSignaling || !window.setuRoomSignaling.testApiEndpoint) {
+        throw new Error('Signaling service unavailable');
+      }
+      const res = await window.setuRoomSignaling.testApiEndpoint(endpoint, secretKey);
+      if (testApiStatus) {
+        testApiStatus.textContent = res.message || 'Connected successfully!';
+        testApiStatus.style.color = 'var(--accent-teal)';
+      }
+    } catch (err) {
+      if (testApiStatus) {
+        testApiStatus.textContent = err.message || 'Connection failed';
+        testApiStatus.style.color = 'var(--accent-rose)';
+      }
+    }
+  });
 
   // 17. Meeting History & Archive
   const historyModal = document.getElementById('historyModal');
@@ -1200,6 +1287,17 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
       } catch (e) {
         console.warn('Failed to parse #join= hash:', e);
+      }
+    } else if (hash.startsWith('#apiRoom=')) {
+      try {
+        const params = new URLSearchParams(hash.substring(1));
+        const roomCode = params.get('apiRoom');
+        const endpoint = params.get('api');
+        if (roomCode && endpoint && window.setuWizard && window.setuWizard.joinApiMeeting) {
+          await window.setuWizard.joinApiMeeting(roomCode, endpoint);
+        }
+      } catch (e) {
+        console.warn('Failed to parse #apiRoom= hash:', e);
       }
     }
   }

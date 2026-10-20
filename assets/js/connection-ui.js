@@ -588,12 +588,58 @@ class ConnectionWizardUI {
         localDisplayName
       );
 
+      this.clientApiContext = { roomCode: formattedCode, endpoint, localDisplayName };
+
       if (statusText) statusText.textContent = `Answer registered! Waiting for host to connect...`;
       if (window.showToast) window.showToast('Joined meeting! Waiting for host connection...');
     } catch (err) {
       console.error('[JoinApiMeeting] Error during API join:', err);
       if (statusText) statusText.textContent = `Join failed: ${err.message}`;
       if (window.showToast) window.showToast('Could not join API meeting: ' + err.message);
+    }
+  }
+
+  /**
+   * Client: Retries joining an API meeting if P2P connection was lost or reset.
+   * Fetches the latest offer, creates a new answer, and submits it to the API.
+   */
+  async retryApiMeeting() {
+    if (!this.clientApiContext) return;
+    const { roomCode, endpoint, localDisplayName } = this.clientApiContext;
+    const statusText = document.getElementById('connStatusText');
+    if (statusText) statusText.textContent = 'Retrying connection... Fetching meeting details...';
+
+    try {
+      const offerObj = await window.setuRoomSignaling.fetchOfferApi(roomCode, endpoint);
+      this.remoteSdp = offerObj.sdp;
+
+      if ((offerObj.hostName || offerObj.label) && window.setuMeeting) {
+        window.setuMeeting.setRemotePeerName(offerObj.hostName || offerObj.label);
+      }
+
+      if (statusText) statusText.textContent = 'Generating encrypted reply...';
+      const answerDesc = await window.setuWebRTC.createAnswer(offerObj.sdp);
+      this.localSdp = answerDesc.sdp;
+
+      if (statusText) statusText.textContent = 'Submitting reply to API...';
+      await window.setuRoomSignaling.submitAnswerApi(
+        roomCode,
+        { type: answerDesc.type, sdp: answerDesc.sdp, label: localDisplayName },
+        endpoint,
+        localDisplayName
+      );
+
+      if (statusText) {
+        statusText.innerHTML = `Reply submitted! Waiting for host... <button id="retryApiBtn" class="btn btn-secondary btn-sm" style="padding: 2px 8px; font-size: 0.7rem; margin-left: 6px;">Retry</button>`;
+        document.getElementById('retryApiBtn')?.addEventListener('click', () => this.retryApiMeeting());
+      }
+      if (window.showToast) window.showToast('Reconnection reply submitted to API');
+    } catch (err) {
+      console.error('[Client/Retry] Retry failed:', err);
+      if (statusText) {
+        statusText.innerHTML = `Retry failed: ${err.message} <button id="retryApiBtn" class="btn btn-secondary btn-sm" style="padding: 2px 8px; font-size: 0.7rem; margin-left: 6px;">Retry</button>`;
+        document.getElementById('retryApiBtn')?.addEventListener('click', () => this.retryApiMeeting());
+      }
     }
   }
 
@@ -855,6 +901,15 @@ class ConnectionWizardUI {
         const secretKey = apiSettings.secretKey || '';
         const pollInterval = apiSettings.pollIntervalSec || 3;
 
+        this.apiMeetingContext = {
+          formattedCode,
+          cleanCode,
+          endpoint,
+          secretKey,
+          pollInterval,
+          hostName
+        };
+
         const statusText = document.getElementById('connStatusText');
         if (statusText) statusText.textContent = 'Registering meeting on API gateway...';
 
@@ -940,6 +995,113 @@ class ConnectionWizardUI {
       console.error('[DirectHost] Error generating offer:', err);
       if (window.showToast) window.showToast('Initialization error: ' + err.message);
     }
+  }
+
+  /**
+   * Host: Handles P2P connection lost. Resets local connection state to receive client's retry,
+   * updates offer on API under same meeting ID, and checks API periodically until connection is regained.
+   */
+  async onHostConnectionLost() {
+    if (!this.apiMeetingContext) return;
+    const { formattedCode, endpoint, secretKey, pollInterval, hostName } = this.apiMeetingContext;
+
+    console.log('[DirectHost] P2P connection lost. Host will check API every minute for client retry...');
+
+    const statusText = document.getElementById('connStatusText');
+    if (statusText) {
+      statusText.innerHTML = `P2P connection lost. Checking API for client retry... <button id="checkApiNowBtn" class="btn btn-secondary btn-sm" style="padding: 2px 8px; font-size: 0.7rem; margin-left: 6px;">Check Now</button>`;
+      document.getElementById('checkApiNowBtn')?.addEventListener('click', (e) => {
+        e.stopPropagation();
+        this.hostCheckApiOnce();
+      });
+    }
+
+    // 1. Refresh WebRTC peer connection so it is ready to receive client's new answer
+    try {
+      const offerDesc = await window.setuWebRTC.createOffer();
+      this.localSdp = offerDesc.sdp;
+
+      // Update offer on API (keeps room live, clears previous stale answer so client gets fresh offer)
+      await window.setuRoomSignaling.registerMeetingApi(
+        formattedCode,
+        { type: offerDesc.type, sdp: offerDesc.sdp, label: hostName },
+        endpoint,
+        secretKey,
+        hostName
+      );
+    } catch (err) {
+      console.warn('[DirectHost] Note refreshing offer on disconnect:', err);
+    }
+
+    // 2. Start checking API (every minute or configured interval)
+    window.setuRoomSignaling.startApiPolling(
+      formattedCode,
+      endpoint,
+      secretKey,
+      pollInterval,
+      async (answerObj) => {
+        try {
+          console.log('[DirectHost/Reconnect] Client response found on API! Applying answer...');
+          if (answerObj.label && window.setuMeeting) {
+            window.setuMeeting.setRemotePeerName(answerObj.label);
+          }
+          await window.setuWebRTC.applyAnswer(answerObj.sdp);
+          if (window.setuMeeting) {
+            window.setuMeeting.onPeerConnected();
+          }
+        } catch (err) {
+          console.error('[DirectHost/Reconnect] Error applying answer:', err);
+        }
+      },
+      (statusMsg) => {
+        const statusText = document.getElementById('connStatusText');
+        if (statusText && (!window.setuWebRTC.pc || window.setuWebRTC.pc.connectionState !== 'connected')) {
+          statusText.innerHTML = `${statusMsg} <button id="checkApiNowBtn" class="btn btn-secondary btn-sm" style="padding: 2px 8px; font-size: 0.7rem; margin-left: 6px;">Check Now</button>`;
+          document.getElementById('checkApiNowBtn')?.addEventListener('click', (e) => {
+            e.stopPropagation();
+            this.hostCheckApiOnce();
+          });
+        }
+      }
+    );
+  }
+
+  /**
+   * Host: Immediately checks API once for participant response (bypasses timer).
+   */
+  async hostCheckApiOnce() {
+    if (!this.apiMeetingContext) return;
+    const { formattedCode, endpoint, secretKey } = this.apiMeetingContext;
+    const statusText = document.getElementById('connStatusText');
+
+    await window.setuRoomSignaling.pollOnce(
+      formattedCode,
+      endpoint,
+      secretKey,
+      async (answerObj) => {
+        try {
+          console.log('[DirectHost/ManualCheck] Client reply found! Applying answer...');
+          if (answerObj.label && window.setuMeeting) {
+            window.setuMeeting.setRemotePeerName(answerObj.label);
+          }
+          await window.setuWebRTC.applyAnswer(answerObj.sdp);
+          if (window.setuMeeting) {
+            window.setuMeeting.onPeerConnected();
+          }
+        } catch (err) {
+          console.error('[DirectHost/ManualCheck] Error applying answer:', err);
+        }
+      },
+      (msg) => {
+        if (statusText && (!window.setuWebRTC.pc || window.setuWebRTC.pc.connectionState !== 'connected')) {
+          statusText.innerHTML = `${msg} <button id="checkApiNowBtn" class="btn btn-secondary btn-sm" style="padding: 2px 8px; font-size: 0.7rem; margin-left: 6px;">Check Now</button>`;
+          document.getElementById('checkApiNowBtn')?.addEventListener('click', (e) => {
+            e.stopPropagation();
+            this.hostCheckApiOnce();
+          });
+        }
+      }
+    );
   }
 
   updatePrejoinMicDisplay(isMuted) {

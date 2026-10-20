@@ -111,8 +111,10 @@ class MeetingController {
           this.onPeerConnected();
         } else if (state === 'failed') {
           this.setMeetingFailedState('NAT/Firewall');
+          this.onPeerConnectionLost();
         } else if (state === 'disconnected') {
           this.setMeetingWaitingState();
+          this.onPeerConnectionLost();
         }
       };
     }
@@ -137,6 +139,27 @@ class MeetingController {
     if (statusDot) statusDot.className = 'status-dot status-busy';
     if (statusText) statusText.textContent = `Connection failed (${reason})`;
     this.stopMeetingTimer();
+  }
+
+  onPeerConnectionLost() {
+    this.isPeerConnected = false;
+    this.stopMeetingTimer();
+
+    if (window.setuSharedPage && window.setuSharedPage.isHost) {
+      if (window.setuWizard && window.setuWizard.onHostConnectionLost) {
+        window.setuWizard.onHostConnectionLost();
+      }
+    } else {
+      if (window.setuWizard && window.setuWizard.clientApiContext) {
+        const statusText = document.getElementById('connStatusText');
+        if (statusText) {
+          statusText.innerHTML = `P2P connection lost. <button id="clientReconnectNowBtn" class="btn btn-secondary btn-sm" style="padding: 2px 8px; font-size: 0.7rem; margin-left: 6px;">Reconnect</button>`;
+          document.getElementById('clientReconnectNowBtn')?.addEventListener('click', () => {
+            window.setuWizard?.retryApiMeeting();
+          });
+        }
+      }
+    }
   }
 
   onPeerConnected() {

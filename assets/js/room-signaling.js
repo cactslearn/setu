@@ -739,6 +739,45 @@ class RoomSignalingService {
   }
 
   /**
+   * One-off check of the API endpoint for participant response (used for manual check or immediate fallback).
+   */
+  async pollOnce(roomCode, endpoint, secretKey = '', onAnswerReceived = null, onStatusUpdate = null) {
+    const cleanUrl = endpoint.trim();
+    const formattedCode = this.formatRoomCode(roomCode);
+    const cleanCode = this.normalizeRoomCode(roomCode);
+
+    if (onStatusUpdate) onStatusUpdate('Checking API now for participant...');
+
+    try {
+      const pollUrl = `${cleanUrl}${cleanUrl.includes('?') ? '&' : '?'}id=${encodeURIComponent(formattedCode)}&secretKey=${encodeURIComponent(secretKey || '')}`;
+      const res = await fetch(pollUrl, {
+        method: 'GET',
+        redirect: 'follow',
+        cache: 'no-store'
+      });
+
+      if (res.ok) {
+        const data = await res.json().catch(() => null);
+        if (data && data.status === 'answered' && data.answer) {
+          const decryptedStr = await this.decryptPayload(cleanCode, data.answer);
+          const answerObj = JSON.parse(decryptedStr);
+          if (answerObj && answerObj.type === 'answer') {
+            if (onStatusUpdate) onStatusUpdate('Participant reply found! Connecting...');
+            if (onAnswerReceived) onAnswerReceived(answerObj);
+            return true;
+          }
+        }
+      }
+      if (onStatusUpdate) onStatusUpdate('No response on API yet. Will check again soon.');
+      return false;
+    } catch (err) {
+      console.warn('[APISignaling] pollOnce error:', err);
+      if (onStatusUpdate) onStatusUpdate('API check failed. Will retry...');
+      return false;
+    }
+  }
+
+  /**
    * Client: Fetches meeting offer from API and decrypts with room code.
    */
   async fetchOfferApi(roomCode, endpoint) {

@@ -8,7 +8,7 @@ const http = require('http');
 const crypto = require('crypto');
 const fs = require('fs');
 const path = require('path');
-const { spawn } = require('child_process');
+const { spawn, exec } = require('child_process');
 
 // Parse CLI arguments
 const args = process.argv.slice(2);
@@ -54,6 +54,7 @@ console.log('[Config] Security Passkey:', config.passkey);
 let screenWidth = 1920;
 let screenHeight = 1080;
 let driverProcess = null;
+let hasXdotool = false;
 
 // Virtual Key Code Map for Windows
 const VK_MAP = {
@@ -87,7 +88,35 @@ function getVirtualKey(key) {
   return null;
 }
 
-// Start persistent native driver on Windows
+// Key Map for Linux (xdotool keysyms)
+const X11_MAP = {
+  Enter: 'Return',
+  Backspace: 'BackSpace',
+  Tab: 'Tab',
+  Escape: 'Escape',
+  ' ': 'space',
+  Space: 'space',
+  PageUp: 'Page_Up',
+  PageDown: 'Page_Down',
+  End: 'End',
+  Home: 'Home',
+  ArrowLeft: 'Left',
+  ArrowUp: 'Up',
+  ArrowRight: 'Right',
+  ArrowDown: 'Down',
+  Delete: 'Delete',
+  Shift: 'Shift_L',
+  Control: 'Control_L',
+  Alt: 'Alt_L'
+};
+
+function getX11Key(key) {
+  if (X11_MAP[key]) return X11_MAP[key];
+  if (key && key.length === 1) return key;
+  return null;
+}
+
+// 1. Windows Native Input Driver
 if (process.platform === 'win32') {
   const driverScript = path.join(__dirname, 'win-driver.ps1');
   if (fs.existsSync(driverScript)) {
@@ -120,6 +149,26 @@ if (process.platform === 'win32') {
       console.warn('[Driver] Failed to start native driver:', err.message);
     }
   }
+}
+
+// 2. Linux Native Input Driver (xdotool)
+if (process.platform === 'linux') {
+  try {
+    const { execSync } = require('child_process');
+    try {
+      execSync('which xdotool', { stdio: 'ignore' });
+      hasXdotool = true;
+      const geom = execSync('xdotool getdisplaygeometry', { encoding: 'utf8' }).trim();
+      const parts = geom.split(/\s+/);
+      if (parts.length >= 2) {
+        screenWidth = parseInt(parts[0], 10) || 1920;
+        screenHeight = parseInt(parts[1], 10) || 1080;
+        console.log(`[Driver] Linux xdotool active. Resolution: ${screenWidth} x ${screenHeight}`);
+      }
+    } catch (_) {
+      console.log('[Driver] Linux: xdotool not detected. For native input, install via: sudo apt install xdotool');
+    }
+  } catch (_) {}
 }
 
 function sendDriverCommand(cmd) {
@@ -168,6 +217,7 @@ const server = http.createServer((req, res) => {
       service: 'setu-companion',
       version: '1.0.0',
       port: config.port,
+      platform: process.platform,
       resolution: `${screenWidth}x${screenHeight}`
     }));
     return;
@@ -223,7 +273,6 @@ server.on('upgrade', (req, socket) => {
       const opcode = firstByte & 0x0F;
 
       if (opcode === 0x8) {
-        // Close frame
         socket.end();
         return;
       }
@@ -233,11 +282,11 @@ server.on('upgrade', (req, socket) => {
       let offset = 2;
 
       if (payloadLength === 126) {
-        if (bufferQueue.length < 4) return; // Wait for length bytes
+        if (bufferQueue.length < 4) return;
         payloadLength = bufferQueue.readUInt16BE(2);
         offset = 4;
       } else if (payloadLength === 127) {
-        if (bufferQueue.length < 10) return; // Wait for length bytes
+        if (bufferQueue.length < 10) return;
         payloadLength = Number(bufferQueue.readBigUInt64BE(2));
         offset = 10;
       }
@@ -246,7 +295,6 @@ server.on('upgrade', (req, socket) => {
       const totalFrameSize = offset + maskLength + payloadLength;
 
       if (bufferQueue.length < totalFrameSize) {
-        // Partial frame: wait for remaining bytes
         return;
       }
 
@@ -263,7 +311,6 @@ server.on('upgrade', (req, socket) => {
         }
       }
 
-      // Advance buffer queue past consumed frame
       bufferQueue = bufferQueue.slice(totalFrameSize);
 
       const msgText = payload.toString('utf8');
@@ -316,6 +363,66 @@ function handlePacket(packet, socket, setAuth, getAuth) {
 function executeInputCommand(packet) {
   const { action, x, y, button, dx, dy, key } = packet;
 
+  // Linux xdotool dispatch
+  if (process.platform === 'linux' && hasXdotool) {
+    switch (action) {
+      case 'mousemove': {
+        if (typeof x === 'number' && typeof y === 'number') {
+          const px = Math.round(x * screenWidth);
+          const py = Math.round(y * screenHeight);
+          exec(`xdotool mousemove ${px} ${py}`, () => {});
+        }
+        break;
+      }
+      case 'mousedown': {
+        if (typeof x === 'number' && typeof y === 'number') {
+          const px = Math.round(x * screenWidth);
+          const py = Math.round(y * screenHeight);
+          exec(`xdotool mousemove ${px} ${py}`, () => {});
+        }
+        const btn = button === 'right' ? 3 : (button === 'middle' ? 2 : 1);
+        exec(`xdotool mousedown ${btn}`, () => {});
+        console.log(`[Input] Mouse down (${button || 'left'})`);
+        break;
+      }
+      case 'mouseup': {
+        if (typeof x === 'number' && typeof y === 'number') {
+          const px = Math.round(x * screenWidth);
+          const py = Math.round(y * screenHeight);
+          exec(`xdotool mousemove ${px} ${py}`, () => {});
+        }
+        const btn = button === 'right' ? 3 : (button === 'middle' ? 2 : 1);
+        exec(`xdotool mouseup ${btn}`, () => {});
+        console.log(`[Input] Mouse up (${button || 'left'})`);
+        break;
+      }
+      case 'wheel': {
+        const btn = dy > 0 ? 5 : 4;
+        exec(`xdotool click ${btn}`, () => {});
+        console.log(`[Input] Mouse wheel (${dy > 0 ? 'down' : 'up'})`);
+        break;
+      }
+      case 'keydown': {
+        const xk = getX11Key(key);
+        if (xk) {
+          exec(`xdotool keydown ${xk}`, () => {});
+          console.log(`[Input] Key down: ${key} (${xk})`);
+        }
+        break;
+      }
+      case 'keyup': {
+        const xk = getX11Key(key);
+        if (xk) {
+          exec(`xdotool keyup ${xk}`, () => {});
+          console.log(`[Input] Key up: ${key} (${xk})`);
+        }
+        break;
+      }
+    }
+    return;
+  }
+
+  // Windows win-driver dispatch
   switch (action) {
     case 'mousemove': {
       if (typeof x === 'number' && typeof y === 'number') {

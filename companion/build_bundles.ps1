@@ -7,6 +7,12 @@ $RepoRoot = Split-Path -Parent $ScriptDir
 $DownloadsDir = Join-Path $RepoRoot "downloads"
 $StagingDir = Join-Path $ScriptDir "staging"
 
+function Write-UnixFile($Path, [string]$Content) {
+    # Strictly enforce Unix LF (\n) line endings with zero carriage returns
+    $normalized = $Content.Replace("`r`n", "`n").Replace("`r", "`n")
+    [System.IO.File]::WriteAllBytes($Path, [System.Text.Encoding]::UTF8.GetBytes($normalized))
+}
+
 Write-Host "----------------------------------------------------"
 Write-Host "Setu Companion - Packaging Release Bundles"
 Write-Host "----------------------------------------------------"
@@ -69,6 +75,19 @@ if (Test-Path $WinZip) { Remove-Item -Force $WinZip }
 Compress-Archive -Path "$WinStage\*" -DestinationPath $WinZip -Force
 Write-Host "[Packaged] $WinZip"
 
+# Shared POSIX-compliant Unix shell launcher (strictly LF line endings, no bashisms)
+$UnixSh = @'
+#!/bin/sh
+DIR="$(cd "$(dirname "$0")" >/dev/null 2>&1 && pwd)"
+cd "$DIR"
+if [ -f "./setu-companion" ]; then
+    chmod +x ./setu-companion
+    exec ./setu-companion "$@"
+else
+    exec node setu-companion.js "$@"
+fi
+'@
+
 # 2. Package macOS Bundle (setu-companion-macos.zip)
 $MacStage = Join-Path $StagingDir "macos"
 if (Test-Path $MacStage) { Remove-Item -Recurse -Force $MacStage }
@@ -84,23 +103,21 @@ How to Run:
 1. Open Terminal in this folder.
 2. Run: ./run-companion.sh
 "@
-Set-Content -Path (Join-Path $MacStage "README.txt") -Value $MacReadme
+Write-UnixFile (Join-Path $MacStage "README.txt") $MacReadme
+Write-UnixFile (Join-Path $MacStage "run-companion.sh") $UnixSh
 
-$MacSh = @"
-#!/bin/bash
-DIR="`$( cd "`$( dirname "`${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
-cd "`$DIR"
-if [ -f "./setu-companion" ]; then
-    chmod +x ./setu-companion
-    ./setu-companion "`$@"
-else
-    node setu-companion.js "`$@"
-fi
-"@
-Set-Content -Path (Join-Path $MacStage "run-companion.sh") -Value $MacSh
+$jsContent = [System.IO.File]::ReadAllText((Join-Path $ScriptDir "setu-companion.js"))
+Write-UnixFile (Join-Path $MacStage "setu-companion.js") $jsContent
 
-Copy-Item (Join-Path $ScriptDir "config.example.json") (Join-Path $MacStage "config.json")
-Copy-Item (Join-Path $ScriptDir "setu-companion.js") (Join-Path $MacStage "setu-companion.js")
+$cfgContent = [System.IO.File]::ReadAllText((Join-Path $ScriptDir "config.example.json"))
+Write-UnixFile (Join-Path $MacStage "config.json") $cfgContent
+
+# If cargo compiled binary exists, copy it
+$CargoMacBinary = Join-Path $ScriptDir "target\release\setu-companion"
+if (Test-Path $CargoMacBinary) {
+    Copy-Item $CargoMacBinary (Join-Path $MacStage "setu-companion")
+    Write-Host "[Included] Compiled macOS binary"
+}
 
 $MacZip = Join-Path $DownloadsDir "setu-companion-macos.zip"
 if (Test-Path $MacZip) { Remove-Item -Force $MacZip }
@@ -115,20 +132,35 @@ New-Item -ItemType Directory -Path $LinuxStage -Force | Out-Null
 $LinuxReadme = @"
 Setu Companion (Linux 64-bit)
 ====================================================
+Requirements:
+For native input execution, install xdotool:
+  sudo apt install xdotool    (Debian/Ubuntu)
+  sudo dnf install xdotool    (Fedora/RHEL)
+  sudo pacman -S xdotool      (Arch)
+
 How to Run:
 1. Open Terminal in this folder.
 2. Run: chmod +x run-companion.sh && ./run-companion.sh
 "@
-Set-Content -Path (Join-Path $LinuxStage "README.txt") -Value $LinuxReadme
+Write-UnixFile (Join-Path $LinuxStage "README.txt") $LinuxReadme
+Write-UnixFile (Join-Path $LinuxStage "run-companion.sh") $UnixSh
+Write-UnixFile (Join-Path $LinuxStage "setu-companion.js") $jsContent
+Write-UnixFile (Join-Path $LinuxStage "config.json") $cfgContent
 
-Copy-Item (Join-Path $ScriptDir "config.example.json") (Join-Path $LinuxStage "config.json")
-Copy-Item (Join-Path $ScriptDir "setu-companion.js") (Join-Path $LinuxStage "setu-companion.js")
-Set-Content -Path (Join-Path $LinuxStage "run-companion.sh") -Value $MacSh
+# If cargo compiled binary exists, copy it
+$CargoLinuxBinary = Join-Path $ScriptDir "target\release\setu-companion"
+if (Test-Path $CargoLinuxBinary) {
+    Copy-Item $CargoLinuxBinary (Join-Path $LinuxStage "setu-companion")
+    Write-Host "[Included] Compiled Linux binary"
+}
 
 $LinuxTar = Join-Path $DownloadsDir "setu-companion-linux-x64.tar.gz"
 if (Test-Path $LinuxTar) { Remove-Item -Force $LinuxTar }
 tar -czf $LinuxTar -C $LinuxStage .
 Write-Host "[Packaged] $LinuxTar"
+
+# Also write run-companion.sh in companion/ folder directly with Unix LF endings
+Write-UnixFile (Join-Path $ScriptDir "run-companion.sh") $UnixSh
 
 # Clean up staging
 Remove-Item -Recurse -Force $StagingDir

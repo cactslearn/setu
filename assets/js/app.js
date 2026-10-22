@@ -31,6 +31,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // 2. Initialize Subsystems
   await window.setuStorage.init();
+  if (window.setuSound) await window.setuSound.init();
   window.setuWizard.init();
   window.setuMeeting.init();
   window.setuChat.init(document.getElementById('chatMessagesContainer'));
@@ -77,6 +78,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         break;
       case 'raise-hand':
         window.showToast(packet.raised ? 'Remote peer raised hand' : 'Remote peer lowered hand');
+        if (packet.raised && window.setuSound) {
+          window.setuSound.playHandRaise();
+        }
         break;
       case 'media-state':
         window.setuMeeting.handleRemoteMediaState(packet.audio, packet.video);
@@ -673,6 +677,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   const prefMuteAudioCheckbox = document.getElementById('prefMuteAudioCheckbox');
   const prefMuteVideoCheckbox = document.getElementById('prefMuteVideoCheckbox');
   const prefNoiseSuppressionCheckbox = document.getElementById('prefNoiseSuppressionCheckbox');
+  const prefMeetingSoundsCheckbox = document.getElementById('prefMeetingSoundsCheckbox');
   const settingsAvatarImg = document.getElementById('settingsAvatarImg');
   const settingsAvatarInitial = document.getElementById('settingsAvatarInitial');
 
@@ -701,6 +706,12 @@ document.addEventListener('DOMContentLoaded', async () => {
       }
       if (prefNoiseSuppressionCheckbox && profile.noiseSuppression !== undefined) {
         prefNoiseSuppressionCheckbox.checked = profile.noiseSuppression;
+      }
+      if (prefMeetingSoundsCheckbox && profile.meetingSounds !== undefined) {
+        prefMeetingSoundsCheckbox.checked = profile.meetingSounds;
+      }
+      if (window.setuSound && profile.meetingSounds !== undefined) {
+        window.setuSound.setEnabled(profile.meetingSounds);
       }
       const camQualitySelect = document.getElementById('settingCameraQuality');
       if (camQualitySelect && profile.cameraQuality) {
@@ -889,6 +900,11 @@ document.addEventListener('DOMContentLoaded', async () => {
       const defaultMutedAudio = !!prefMuteAudioCheckbox?.checked;
       const defaultMutedVideo = !!prefMuteVideoCheckbox?.checked;
       const noiseSuppression = !!prefNoiseSuppressionCheckbox?.checked;
+      const meetingSounds = prefMeetingSoundsCheckbox ? !!prefMeetingSoundsCheckbox.checked : true;
+
+      if (window.setuSound) {
+        window.setuSound.setEnabled(meetingSounds);
+      }
 
       const cameraQuality = document.getElementById('settingCameraQuality')?.value || '720p';
       const screenShareMode = document.getElementById('settingScreenShareMode')?.value || 'sharpness';
@@ -911,6 +927,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         defaultMutedVideo,
         defaultMuteVideo: defaultMutedVideo,
         noiseSuppression,
+        meetingSounds,
         cameraQuality,
         screenShareMode,
         autoReduceQuality,

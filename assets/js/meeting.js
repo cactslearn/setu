@@ -132,8 +132,13 @@ class MeetingController {
   }
 
   onPeerConnectionLost() {
+    const wasConnected = this.isPeerConnected;
     this.isPeerConnected = false;
     this.stopMeetingTimer();
+
+    if (wasConnected && window.setuSound) {
+      window.setuSound.playLeave();
+    }
 
     if (window.setuSharedPage && window.setuSharedPage.isHost) {
       if (window.setuWizard && window.setuWizard.onHostConnectionLost) {
@@ -153,7 +158,12 @@ class MeetingController {
   }
 
   onPeerConnected() {
+    const wasConnected = this.isPeerConnected;
     this.isPeerConnected = true;
+
+    if (!wasConnected && window.setuSound) {
+      window.setuSound.playJoin();
+    }
 
     if (window.setuRoomSignaling && window.setuRoomSignaling.stopApiPolling) {
       window.setuRoomSignaling.stopApiPolling();
@@ -553,6 +563,9 @@ class MeetingController {
   }
 
   handleRemoteMeetingEnded() {
+    if (this.isPeerConnected && window.setuSound) {
+      window.setuSound.playLeave();
+    }
     this.leaveMeeting(true);
   }
 

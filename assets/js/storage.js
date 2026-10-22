@@ -319,7 +319,8 @@ class StorageEngine {
       turnServerUrl: '',
       turnUsername: '',
       turnCredential: '',
-      personalRoomCode: ''
+      personalRoomCode: '',
+      meetingSounds: true
     });
   }
 

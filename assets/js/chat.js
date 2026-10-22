@@ -241,6 +241,10 @@ class ChatModule {
   }
 
   playChime() {
+    if (window.setuSound) {
+      window.setuSound.playMessage();
+      return;
+    }
     try {
       const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
       const osc = audioCtx.createOscillator();

@@ -916,6 +916,10 @@
               <input type="checkbox" id="prefNoiseSuppressionCheckbox" checked>
               <span>Enable audio noise suppression &amp; echo cancellation</span>
             </label>
+            <label style="display: flex; align-items: center; gap: 0.6rem; font-size: 0.825rem; cursor: pointer;">
+              <input type="checkbox" id="prefMeetingSoundsCheckbox" checked>
+              <span>Play audio chimes when participants join or disconnect</span>
+            </label>
           </div>
         </div>
 
@@ -1181,6 +1185,7 @@
 
   <!-- Core Subsystems & Application Logic -->
   <script src="assets/js/storage.js"></script>
+  <script src="assets/js/sound.js"></script>
   <script src="assets/js/signaling.js"></script>
   <script src="assets/js/room-signaling.js"></script>
   <script src="assets/js/identity.js"></script>

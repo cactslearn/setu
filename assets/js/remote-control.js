@@ -8,7 +8,7 @@
 class RemoteControlModule {
   constructor() {
     this.companionPort = 49152;
-    this.companionPasskey = '';
+    this.companionPasskey = 'setu_remote_access_key';
     this.allowRemoteControl = false;
     this.ws = null;
     this.pollTimer = null;
@@ -25,6 +25,9 @@ class RemoteControlModule {
     this.onOverlayWheel = this.handleOverlayWheel.bind(this);
     this.onOverlayKeyDown = this.handleOverlayKeyDown.bind(this);
     this.onOverlayKeyUp = this.handleOverlayKeyUp.bind(this);
+    this.onOverlayMouseLeave = this.handleOverlayMouseLeave.bind(this);
+    this.onWindowKeyDown = this.handleWindowKeyDown.bind(this);
+    this.onWindowKeyUp = this.handleWindowKeyUp.bind(this);
     this.onOverlayContextMenu = (e) => e.preventDefault();
   }
 
@@ -40,7 +43,7 @@ class RemoteControlModule {
       try {
         const s = await window.setuStorage.getRemoteControlSettings();
         this.companionPort = s.companionPort || 49152;
-        this.companionPasskey = s.companionPasskey || '';
+        this.companionPasskey = (s.companionPasskey && s.companionPasskey.trim()) ? s.companionPasskey.trim() : 'setu_remote_access_key';
         this.allowRemoteControl = !!s.allowRemoteControl;
       } catch (err) {
         console.warn('[RemoteControl] Error loading settings:', err);
@@ -399,14 +402,12 @@ class RemoteControlModule {
       this.ws.onclose = () => {
         console.log('[RemoteControl] Companion WebSocket closed.');
         if (this.allowRemoteControl && !this.pollTimer) {
-          this.triggerBundleDownload();
           this.startCompanionPolling();
         }
       };
     } catch (err) {
       console.warn('[RemoteControl] Failed to create WebSocket:', err);
       if (this.allowRemoteControl) {
-        this.triggerBundleDownload();
         this.startCompanionPolling();
       }
     }
@@ -529,12 +530,15 @@ class RemoteControlModule {
     overlay.focus();
 
     overlay.addEventListener('mousemove', this.onOverlayMouseMove, { passive: true });
+    overlay.addEventListener('mouseleave', this.onOverlayMouseLeave);
     overlay.addEventListener('mousedown', this.onOverlayMouseDown);
     overlay.addEventListener('mouseup', this.onOverlayMouseUp);
     overlay.addEventListener('wheel', this.onOverlayWheel, { passive: false });
-    overlay.addEventListener('keydown', this.onOverlayKeyDown);
-    overlay.addEventListener('keyup', this.onOverlayKeyUp);
     overlay.addEventListener('contextmenu', this.onOverlayContextMenu);
+
+    // Window-level keyboard listeners ensure typing works even if overlay element loses focus
+    window.addEventListener('keydown', this.onWindowKeyDown, true);
+    window.addEventListener('keyup', this.onWindowKeyUp, true);
   }
 
   stopViewerControl() {
@@ -544,14 +548,17 @@ class RemoteControlModule {
     const overlay = document.getElementById('remoteControlOverlay');
     if (overlay) {
       overlay.style.display = 'none';
+      overlay.style.cursor = 'default';
       overlay.removeEventListener('mousemove', this.onOverlayMouseMove);
+      overlay.removeEventListener('mouseleave', this.onOverlayMouseLeave);
       overlay.removeEventListener('mousedown', this.onOverlayMouseDown);
       overlay.removeEventListener('mouseup', this.onOverlayMouseUp);
       overlay.removeEventListener('wheel', this.onOverlayWheel);
-      overlay.removeEventListener('keydown', this.onOverlayKeyDown);
-      overlay.removeEventListener('keyup', this.onOverlayKeyUp);
       overlay.removeEventListener('contextmenu', this.onOverlayContextMenu);
     }
+
+    window.removeEventListener('keydown', this.onWindowKeyDown, true);
+    window.removeEventListener('keyup', this.onWindowKeyUp, true);
 
     if (this.rafId) {
       cancelAnimationFrame(this.rafId);
@@ -612,7 +619,14 @@ class RemoteControlModule {
 
   handleOverlayMouseMove(e) {
     const coords = this.getNormalizedCoordinates(e, e.currentTarget);
-    if (!coords) return;
+    if (!coords) {
+      // In letterbox padding or outside active video frame
+      e.currentTarget.style.cursor = 'default';
+      return;
+    }
+
+    // Inside active remote screen area: hide local cursor so only the single remote host cursor is seen
+    e.currentTarget.style.cursor = 'none';
 
     this.pendingMove = coords;
 
@@ -632,7 +646,17 @@ class RemoteControlModule {
     }
   }
 
+  handleOverlayMouseLeave(e) {
+    if (e && e.currentTarget) {
+      e.currentTarget.style.cursor = 'default';
+    }
+  }
+
   handleOverlayMouseDown(e) {
+    if (e.target && e.target.closest && e.target.closest('.rc-indicator-banner')) {
+      return;
+    }
+    e.preventDefault();
     const coords = this.getNormalizedCoordinates(e, e.currentTarget);
     if (!coords) return;
 
@@ -651,6 +675,10 @@ class RemoteControlModule {
   }
 
   handleOverlayMouseUp(e) {
+    if (e.target && e.target.closest && e.target.closest('.rc-indicator-banner')) {
+      return;
+    }
+    e.preventDefault();
     const coords = this.getNormalizedCoordinates(e, e.currentTarget);
     if (!coords) return;
 
@@ -681,6 +709,22 @@ class RemoteControlModule {
   }
 
   handleOverlayKeyDown(e) {
+    this.handleWindowKeyDown(e);
+  }
+
+  handleOverlayKeyUp(e) {
+    this.handleWindowKeyUp(e);
+  }
+
+  handleWindowKeyDown(e) {
+    if (!this.isViewerActive) return;
+
+    // Do not intercept if user is typing in local input/textarea/editable elements
+    const active = document.activeElement;
+    if (active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA' || active.isContentEditable)) {
+      return;
+    }
+
     if (e.key === 'Escape') {
       this.stopViewerControl();
       if (window.setuWebRTC) {
@@ -690,6 +734,8 @@ class RemoteControlModule {
     }
 
     e.preventDefault();
+    e.stopPropagation();
+
     if (window.setuWebRTC) {
       window.setuWebRTC.sendData('control', JSON.stringify({
         type: 'rc-input',
@@ -706,8 +752,17 @@ class RemoteControlModule {
     }
   }
 
-  handleOverlayKeyUp(e) {
+  handleWindowKeyUp(e) {
+    if (!this.isViewerActive) return;
+
+    const active = document.activeElement;
+    if (active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA' || active.isContentEditable)) {
+      return;
+    }
+
     e.preventDefault();
+    e.stopPropagation();
+
     if (window.setuWebRTC) {
       window.setuWebRTC.sendData('control', JSON.stringify({
         type: 'rc-input',

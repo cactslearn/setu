@@ -45,17 +45,7 @@ class MeetingController {
     };
 
     window.setuWebRTC.onRemoteScreenStream = (screenStream) => {
-      console.log('[MeetingUI] onRemoteScreenStream received:', screenStream);
-      if (this.isPresentationActive && !this.isLocalPresenting) {
-        const presVideo = document.getElementById('presentationVideo');
-        if (presVideo && screenStream) {
-          presVideo.srcObject = screenStream;
-          presVideo.muted = true;
-          presVideo.play().catch(async () => {
-            try { await presVideo.play(); } catch (_) {}
-          });
-        }
-      }
+      this.handleRemoteScreenStreamUpdate(screenStream);
     };
   }
 
@@ -929,20 +919,17 @@ class MeetingController {
     };
 
     window.setuWebRTC.onRemoteScreenStream = (screenStream) => {
-      console.log('[MeetingUI] onRemoteScreenStream received:', screenStream);
-      if (this.isPresentationActive && !this.isLocalPresenting) {
-        const presVideo = document.getElementById('presentationVideo');
-        if (presVideo && screenStream) {
-          if (presVideo.srcObject !== screenStream) {
-            presVideo.srcObject = screenStream;
-          }
-          presVideo.muted = true;
-          presVideo.play().catch(async () => {
-            try { await presVideo.play(); } catch (_) {}
-          });
-        }
-      }
+      this.handleRemoteScreenStreamUpdate(screenStream);
     };
+
+    const stopStageBtn = document.getElementById('stopSharingFromStageBtn');
+    if (stopStageBtn) {
+      stopStageBtn.onclick = () => {
+        if (window.setuWebRTC && window.setuWebRTC.stopScreenShare) {
+          window.setuWebRTC.stopScreenShare();
+        }
+      };
+    }
 
     // Presentation Expansion & Viewport Controls (Expand, Fullscreen, Fit, Double-Click)
     const expandBtn = document.getElementById('expandPresentationBtn');
@@ -1040,34 +1027,64 @@ class MeetingController {
     this.updatePeopleList();
   }
 
+  handleRemoteScreenStreamUpdate(screenStream) {
+    console.log('[MeetingUI] onRemoteScreenStream received:', screenStream);
+    if (this.isPresentationActive && !this.isLocalPresenting) {
+      const presVideo = document.getElementById('presentationVideo');
+      if (presVideo && screenStream) {
+        if (presVideo.srcObject !== screenStream) {
+          presVideo.srcObject = screenStream;
+        }
+        presVideo.muted = true;
+        presVideo.play().catch(async () => {
+          try { await presVideo.play(); } catch (_) {}
+        });
+      }
+    }
+  }
+
   renderPresentationStage(stream, titleText) {
     const stage = document.getElementById('videoStage');
     const presBox = document.getElementById('mainPresentationBox');
     const presVideo = document.getElementById('presentationVideo');
     const presTitle = document.getElementById('presentationTitleText');
+    const localCard = document.getElementById('localPresenterCard');
 
     if (stage) stage.classList.add('in-presentation-mode');
     if (presBox) presBox.style.display = 'flex';
     if (presTitle) presTitle.textContent = titleText;
 
-    if (presVideo && stream) {
-      if (presVideo.srcObject !== stream) {
-        presVideo.srcObject = stream;
+    if (this.isLocalPresenting) {
+      // Local presenter view: show card, hide live video to eliminate infinite mirror loop and screen flicker
+      if (localCard) localCard.style.display = 'flex';
+      if (presVideo) {
+        presVideo.style.display = 'none';
+        presVideo.srcObject = null;
       }
-      presVideo.muted = true;
-      presVideo.play().catch(async (e) => {
-        console.warn('presVideo play error, retrying muted:', e);
-        try { await presVideo.play(); } catch (_) {}
-      });
-
-      const tracks = stream.getVideoTracks();
-      if (tracks.length > 0) {
-        tracks[0].addEventListener('unmute', () => {
-          if (presVideo.srcObject !== stream) {
-            presVideo.srcObject = stream;
-          }
-          presVideo.play().catch(() => {});
+    } else {
+      // Remote viewer view: show live video of presenter screen
+      if (localCard) localCard.style.display = 'none';
+      if (presVideo) {
+        presVideo.style.display = 'block';
+        if (stream && presVideo.srcObject !== stream) {
+          presVideo.srcObject = stream;
+        }
+        presVideo.muted = true;
+        presVideo.play().catch(async (e) => {
+          console.warn('presVideo play error, retrying muted:', e);
+          try { await presVideo.play(); } catch (_) {}
         });
+
+        const tracks = stream ? stream.getVideoTracks() : [];
+        if (tracks.length > 0 && !tracks[0]._hasUnmuteHook) {
+          tracks[0]._hasUnmuteHook = true;
+          tracks[0].addEventListener('unmute', () => {
+            if (presVideo.srcObject !== stream) {
+              presVideo.srcObject = stream;
+            }
+            presVideo.play().catch(() => {});
+          });
+        }
       }
     }
 
@@ -1078,6 +1095,7 @@ class MeetingController {
     const stage = document.getElementById('videoStage');
     const presBox = document.getElementById('mainPresentationBox');
     const presVideo = document.getElementById('presentationVideo');
+    const localCard = document.getElementById('localPresenterCard');
     const expandText = document.getElementById('expandPresentationText');
 
     if (stage) {
@@ -1091,7 +1109,9 @@ class MeetingController {
       document.exitFullscreen().catch(() => {});
     }
     if (presBox) presBox.style.display = 'none';
+    if (localCard) localCard.style.display = 'none';
     if (presVideo) {
+      presVideo.style.display = 'block';
       presVideo.srcObject = null;
     }
 

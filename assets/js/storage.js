@@ -375,7 +375,7 @@ class StorageEngine {
   async getRemoteControlSettings() {
     return await this.getSetting('remote_control_settings', {
       companionPort: 49152,
-      companionPasskey: '',
+      companionPasskey: 'setu_remote_access_key',
       allowRemoteControl: false
     });
   }
@@ -385,7 +385,7 @@ class StorageEngine {
     const updated = {
       ...current,
       companionPort: Math.max(1024, Math.min(65535, parseInt(settings.companionPort, 10) || 49152)),
-      companionPasskey: (settings.companionPasskey !== undefined ? settings.companionPasskey : current.companionPasskey || '').trim(),
+      companionPasskey: (settings.companionPasskey !== undefined && settings.companionPasskey !== null ? settings.companionPasskey : (current.companionPasskey || 'setu_remote_access_key')).trim(),
       allowRemoteControl: settings.allowRemoteControl !== undefined ? !!settings.allowRemoteControl : current.allowRemoteControl
     };
     return await this.setSetting('remote_control_settings', updated);

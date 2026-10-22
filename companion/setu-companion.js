@@ -27,7 +27,7 @@ for (let i = 0; i < args.length; i++) {
 
 // Load or create config.json
 const configPath = path.join(__dirname, 'config.json');
-let config = { port: 49152, passkey: 'setu_sec_' + crypto.randomBytes(16).toString('hex') };
+let config = { port: 49152, passkey: 'setu_remote_access_key' };
 
 if (fs.existsSync(configPath)) {
   try {
@@ -39,6 +39,10 @@ if (fs.existsSync(configPath)) {
     fs.writeFileSync(configPath, JSON.stringify(config, null, 2), 'utf8');
     console.log('[Config] Created default config at:', configPath);
   } catch (_) {}
+}
+
+if (!config.passkey || !config.passkey.trim()) {
+  config.passkey = 'setu_remote_access_key';
 }
 
 if (portOverride) config.port = portOverride;
@@ -76,14 +80,43 @@ const VK_MAP = {
   Delete: 46,
   Shift: 16,
   Control: 17,
-  Alt: 18
+  Alt: 18,
+  Meta: 91,
+  // OEM Punctuation & Symbols
+  ';': 186,
+  ':': 186,
+  '=': 187,
+  '+': 187,
+  ',': 188,
+  '<': 188,
+  '-': 189,
+  '_': 189,
+  '.': 190,
+  '>': 190,
+  '/': 191,
+  '?': 191,
+  '`': 192,
+  '~': 192,
+  '[': 219,
+  '{': 219,
+  '\\': 220,
+  '|': 220,
+  ']': 221,
+  '}': 221,
+  '\'': 222,
+  '"': 222
 };
 
 function getVirtualKey(key) {
   if (VK_MAP[key]) return VK_MAP[key];
   if (key && key.length === 1) {
+    const code = key.charCodeAt(0);
+    // 0-9
+    if (code >= 48 && code <= 57) return code;
+    // A-Z / a-z
     const upper = key.toUpperCase();
-    return upper.charCodeAt(0);
+    const upCode = upper.charCodeAt(0);
+    if (upCode >= 65 && upCode <= 90) return upCode;
   }
   return null;
 }
@@ -107,7 +140,18 @@ const X11_MAP = {
   Delete: 'Delete',
   Shift: 'Shift_L',
   Control: 'Control_L',
-  Alt: 'Alt_L'
+  Alt: 'Alt_L',
+  Meta: 'Super_L',
+  '.': 'period',
+  ',': 'comma',
+  ';': 'semicolon',
+  ':': 'colon',
+  '-': 'minus',
+  '_': 'underscore',
+  '=': 'equal',
+  '+': 'plus',
+  '/': 'slash',
+  '?': 'question'
 };
 
 function getX11Key(key) {
@@ -339,7 +383,7 @@ function handlePacket(packet, socket, setAuth, getAuth) {
       console.log('[Auth] Security passkey verified successfully');
       sendWsMessage(socket, { type: 'rc-auth-success' });
     } else {
-      console.warn('[Auth] Passkey mismatch. Closing connection');
+      console.warn(`[Auth] Passkey mismatch. Configured in companion: "${config.passkey}", Received from browser: "${packet.passkey || ''}". Closing connection.`);
       sendWsMessage(socket, { type: 'rc-auth-failed', reason: 'Passkey mismatch' });
       socket.end();
     }

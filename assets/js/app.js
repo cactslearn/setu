@@ -39,6 +39,10 @@ document.addEventListener('DOMContentLoaded', async () => {
   const notepadEl = document.getElementById('sharedNotepadText');
   window.setuSharedPage.init(canvasEl, notepadEl, false);
 
+  if (window.setuRemoteControl) {
+    await window.setuRemoteControl.init();
+  }
+
   // 3. WebRTC DataChannel Message Router
   window.setuWebRTC.onChannelMessage = (channelLabel, data) => {
     if (channelLabel === 'chat') {
@@ -62,6 +66,14 @@ document.addEventListener('DOMContentLoaded', async () => {
         break;
       case 'reaction':
         window.setuMeeting.renderFloatingReaction(packet.emoji);
+        break;
+      case 'rc-request':
+      case 'rc-grant':
+      case 'rc-revoke':
+      case 'rc-input':
+        if (window.setuRemoteControl) {
+          window.setuRemoteControl.handleControlPacket(packet);
+        }
         break;
       case 'raise-hand':
         window.showToast(packet.raised ? 'Remote peer raised hand' : 'Remote peer lowered hand');
@@ -774,6 +786,17 @@ document.addEventListener('DOMContentLoaded', async () => {
           }
         } catch (_) {}
       }
+
+      // Load remote control & companion settings
+      if (window.setuStorage && window.setuStorage.getRemoteControlSettings) {
+        try {
+          const rcSettings = await window.setuStorage.getRemoteControlSettings();
+          const portInput = document.getElementById('settingCompanionPort');
+          const passkeyInput = document.getElementById('settingCompanionPasskey');
+          if (portInput) portInput.value = rcSettings.companionPort || 49152;
+          if (passkeyInput) passkeyInput.value = rcSettings.companionPasskey || '';
+        } catch (_) {}
+      }
     } catch (e) {
       console.warn('Failed to load profile:', e);
     }
@@ -924,6 +947,22 @@ document.addEventListener('DOMContentLoaded', async () => {
             secretKey: apiSecretKey,
             pollIntervalSec: apiPollInterval
           });
+        } catch (_) {}
+      }
+
+      // Save remote control & companion settings
+      if (window.setuStorage && window.setuStorage.saveRemoteControlSettings) {
+        try {
+          const companionPort = parseInt(document.getElementById('settingCompanionPort')?.value, 10) || 49152;
+          const companionPasskey = document.getElementById('settingCompanionPasskey')?.value.trim() || '';
+          await window.setuStorage.saveRemoteControlSettings({
+            companionPort,
+            companionPasskey
+          });
+          if (window.setuRemoteControl) {
+            window.setuRemoteControl.companionPort = companionPort;
+            window.setuRemoteControl.companionPasskey = companionPasskey;
+          }
         } catch (_) {}
       }
 

@@ -371,6 +371,26 @@ class StorageEngine {
     return await this.setSetting('api_signaling_settings', updated);
   }
 
+  // --- Remote Control & Companion Settings ---
+  async getRemoteControlSettings() {
+    return await this.getSetting('remote_control_settings', {
+      companionPort: 49152,
+      companionPasskey: '',
+      allowRemoteControl: false
+    });
+  }
+
+  async saveRemoteControlSettings(settings) {
+    const current = await this.getRemoteControlSettings();
+    const updated = {
+      ...current,
+      companionPort: Math.max(1024, Math.min(65535, parseInt(settings.companionPort, 10) || 49152)),
+      companionPasskey: (settings.companionPasskey !== undefined ? settings.companionPasskey : current.companionPasskey || '').trim(),
+      allowRemoteControl: settings.allowRemoteControl !== undefined ? !!settings.allowRemoteControl : current.allowRemoteControl
+    };
+    return await this.setSetting('remote_control_settings', updated);
+  }
+
   // --- Meeting History Archive ---
   _getFallbackHistory() {
     try {

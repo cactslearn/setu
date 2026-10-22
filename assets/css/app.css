@@ -2203,6 +2203,80 @@ body {
   }
 }
 
+/* ==========================================================================
+   Remote Control & Companion UI
+   ========================================================================== */
+.remote-control-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 25;
+  cursor: default;
+  outline: none;
+  background: transparent;
+  user-select: none;
+}
 
+.remote-control-overlay:focus {
+  outline: 2px solid rgba(66, 133, 244, 0.65);
+  outline-offset: -2px;
+}
 
+.rc-indicator-banner {
+  position: absolute;
+  top: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(20, 20, 26, 0.92);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(66, 133, 244, 0.45);
+  border-radius: 20px;
+  padding: 4px 12px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--text-main);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+  pointer-events: auto;
+  z-index: 30;
+  white-space: nowrap;
+}
 
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px;
+  border-radius: 12px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  line-height: 1;
+}
+
+.badge-secondary {
+  background: var(--bg-surface-elevated);
+  color: var(--text-secondary);
+  border: 1px solid var(--border-subtle);
+}
+
+.badge-success {
+  background: rgba(15, 157, 88, 0.15);
+  color: #34a853;
+  border: 1px solid rgba(15, 157, 88, 0.35);
+}
+
+.badge-warning {
+  background: rgba(249, 171, 0, 0.15);
+  color: #f9ab00;
+  border: 1px solid rgba(249, 171, 0, 0.35);
+}
+
+.badge-danger {
+  background: rgba(234, 67, 53, 0.15);
+  color: #ea4335;
+  border: 1px solid rgba(234, 67, 53, 0.35);
+}

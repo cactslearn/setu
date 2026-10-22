@@ -903,6 +903,10 @@ class MeetingController {
       const screenBtn = document.getElementById('screenShareBtn');
       if (screenBtn) screenBtn.classList.add('active');
 
+      if (window.setuRemoteControl) {
+        window.setuRemoteControl.onPresentationStateChanged(true, false);
+      }
+
       this.updatePeopleList();
     };
 
@@ -916,6 +920,11 @@ class MeetingController {
 
       const screenBtn = document.getElementById('screenShareBtn');
       if (screenBtn) screenBtn.classList.remove('active');
+
+      if (window.setuRemoteControl) {
+        window.setuRemoteControl.onPresentationStateChanged(false, false);
+      }
+
       this.updatePeopleList();
     };
 
@@ -1024,6 +1033,9 @@ class MeetingController {
       this.isPresentationActive = false;
       this.clearPresentationStage();
       if (window.showToast) window.showToast('Screen presentation ended');
+    }
+    if (window.setuRemoteControl) {
+      window.setuRemoteControl.onPresentationStateChanged(false, active);
     }
     this.updatePeopleList();
   }

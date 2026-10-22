@@ -247,9 +247,37 @@
                     </svg>
                     <span id="fitPresentationText">Fit</span>
                   </button>
+
+                  <!-- Remote Control Request Action (for Viewer) -->
+                  <button id="requestRemoteControlBtn" class="pres-action-btn" title="Request to interact with shared screen" aria-label="Request Remote Control" style="display: none;">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect>
+                      <line x1="8" y1="21" x2="16" y2="21"></line>
+                      <line x1="12" y1="17" x2="12" y2="21"></line>
+                    </svg>
+                    <span id="requestRemoteControlText">Request Control</span>
+                  </button>
+
+                  <!-- Host Remote Control Permission Bar (for Presenter) -->
+                  <div id="hostRemoteControlBar" style="display: none; align-items: center; gap: 0.4rem; padding-left: 0.5rem; border-left: 1px solid var(--border-subtle);">
+                    <label style="display: flex; align-items: center; gap: 0.35rem; font-size: 0.75rem; font-weight: 600; cursor: pointer; color: var(--text-main); user-select: none;">
+                      <input type="checkbox" id="allowRemoteControlCheckbox" style="accent-color: var(--accent-blue); cursor: pointer;">
+                      <span>Allow Remote</span>
+                    </label>
+                    <span id="companionActiveStatusBadge" class="badge badge-secondary" style="font-size: 0.65rem; padding: 2px 6px;">Disconnected</span>
+                  </div>
                 </div>
               </div>
-              <video id="presentationVideo" class="presentation-video-el" autoplay playsinline muted title="Double-click to toggle fullscreen"></video>
+              <div style="position: relative; width: 100%; height: 100%; overflow: hidden; display: flex; align-items: center; justify-content: center;">
+                <video id="presentationVideo" class="presentation-video-el" autoplay playsinline muted title="Double-click to toggle fullscreen"></video>
+                <!-- Remote Control Input Overlay -->
+                <div id="remoteControlOverlay" class="remote-control-overlay" style="display: none;" tabindex="0" title="Remote Control Active - Click and type to interact">
+                  <div class="rc-indicator-banner">
+                    <span id="rcBannerText">[Remote Control Active] Click to focus. Press Esc to release.</span>
+                    <button id="releaseRemoteControlBtn" class="btn btn-secondary btn-sm" style="padding: 2px 8px; font-size: 0.7rem; color: var(--text-main);" type="button">Release</button>
+                  </div>
+                </div>
+              </div>
             </div>
 
             <!-- Participants Video Area (Arranged in side strip during presentation, or normal grid/PIP) -->
@@ -994,6 +1022,43 @@
           </div>
         </div>
 
+        <!-- Section: Remote Control & Companion -->
+        <div style="margin-top: 1.25rem; border-top: 1px solid var(--border-subtle); padding-top: 1rem;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.4rem;">
+            <div style="font-weight: 700; font-size: 0.9rem; color: var(--text-main);">Remote Control &amp; Companion</div>
+            <span style="font-size: 0.725rem; color: var(--accent-teal); font-weight: 600;">Native Input Bridge</span>
+          </div>
+          <div style="font-size: 0.75rem; color: var(--text-muted); margin-bottom: 0.75rem; line-height: 1.45;">
+            Allow remote meeting participants to interact with your shared screen. Requires the Setu Companion running locally on your computer. Commands are strictly authenticated using your private security passkey.
+          </div>
+
+          <div style="display: grid; grid-template-columns: 140px 1fr; gap: 0.75rem;">
+            <div class="form-field-group">
+              <label class="form-label" for="settingCompanionPort">Port</label>
+              <input type="number" id="settingCompanionPort" class="select-input" value="49152" min="1024" max="65535" placeholder="49152">
+            </div>
+            <div class="form-field-group">
+              <label class="form-label" for="settingCompanionPasskey">Security Passkey</label>
+              <div style="display: flex; gap: 0.4rem;">
+                <input type="password" id="settingCompanionPasskey" class="select-input" placeholder="Set or generate secret passkey" style="font-family: var(--font-mono); font-size: 0.8rem;">
+                <button id="togglePasskeyVisibilityBtn" class="btn btn-secondary btn-sm" type="button" title="Show/Hide passkey" style="white-space: nowrap;">Show</button>
+                <button id="generatePasskeyBtn" class="btn btn-secondary btn-sm" type="button" title="Generate random passkey">Generate</button>
+                <button id="copyPasskeyBtn" class="btn btn-secondary btn-sm" type="button" title="Copy passkey to clipboard">Copy</button>
+              </div>
+            </div>
+          </div>
+          <div style="font-size: 0.725rem; color: var(--text-muted); margin-top: 0.35rem;">
+            Setu Companion only accepts commands when the passkey matches. Use the same port and passkey in Setu Companion.
+          </div>
+
+          <!-- Status & Diagnostics -->
+          <div style="display: flex; gap: 0.75rem; align-items: center; margin-top: 0.85rem; padding: 0.65rem 0.85rem; background: var(--bg-surface-secondary); border: 1px solid var(--border-subtle); border-radius: var(--radius-sm);">
+            <span id="companionSettingsStatusBadge" class="badge badge-secondary" style="font-size: 0.725rem;">Disconnected</span>
+            <button id="testCompanionConnectionBtn" class="btn btn-secondary btn-sm" type="button">Test Connection</button>
+            <button id="downloadCompanionFromSettingsBtn" class="btn btn-primary btn-sm" type="button" style="margin-left: auto;">Download Companion</button>
+          </div>
+        </div>
+
         <div style="margin-top: 1.5rem; display: flex; justify-content: flex-end; gap: 0.5rem;">
           <button id="saveSettingsBtn" class="btn btn-primary">Save Settings</button>
         </div>
@@ -1113,6 +1178,7 @@
   <script src="assets/js/privacy.js"></script>
   <script src="assets/js/connection-ui.js"></script>
   <script src="assets/js/meeting.js"></script>
+  <script src="assets/js/remote-control.js"></script>
   <script src="assets/js/app.js"></script>
 </body>
 </html>

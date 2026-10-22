@@ -73,6 +73,7 @@ class WebRTCManager {
     this.dummyScreenTrack = null;
     this.dummyCamTrack = null;
     this.dummyAudioTrack = null;
+    this.dummyAudioCtx = null;
 
     this.remoteCameraTrack = null;
     this.remoteCameraStream = null;
@@ -107,9 +108,12 @@ class WebRTCManager {
     if (audioDeviceId) this.selectedAudioDeviceId = audioDeviceId;
     if (videoDeviceId) this.selectedVideoDeviceId = videoDeviceId;
 
-    const audioConstraints = this.selectedAudioDeviceId
-      ? { deviceId: { exact: this.selectedAudioDeviceId } }
-      : true;
+    const audioConstraints = {
+      echoCancellation: true,
+      noiseSuppression: true,
+      autoGainControl: true,
+      ...(this.selectedAudioDeviceId ? { deviceId: { exact: this.selectedAudioDeviceId } } : {})
+    };
 
     const preset = CAMERA_QUALITY_PRESETS[this.currentCameraPreset] || CAMERA_QUALITY_PRESETS['720p'];
 
@@ -134,6 +138,20 @@ class WebRTCManager {
 
       // Apply initial mic mute state
       this.localStream.getAudioTracks().forEach(t => (t.enabled = !this.isAudioMuted));
+
+      // If active audio sender was holding a dummy placeholder, replace with real hardware microphone
+      if (this.audioSender && this.localStream.getAudioTracks().length > 0) {
+        const realTrack = this.localStream.getAudioTracks()[0];
+        try {
+          await this.audioSender.replaceTrack(realTrack);
+          if (this.dummyAudioTrack) {
+            try { this.dummyAudioTrack.stop(); } catch (_) {}
+            this.dummyAudioTrack = null;
+          }
+        } catch (e) {
+          console.warn('[WebRTC] replaceTrack with active mic note:', e);
+        }
+      }
 
       return this.localStream;
     } catch (err) {
@@ -204,10 +222,14 @@ class WebRTCManager {
       }
 
       if (this.pc) {
-        const sender = this.pc.getSenders().find(s => s.track && s.track.kind === 'audio');
+        const sender = this.audioSender || this.pc.getSenders().find(s => s.track && s.track.kind === 'audio');
         if (sender) {
           await sender.replaceTrack(newTrack);
         }
+      }
+      if (this.dummyAudioTrack) {
+        try { this.dummyAudioTrack.stop(); } catch (_) {}
+        this.dummyAudioTrack = null;
       }
       return true;
     } catch (e) {
@@ -275,12 +297,21 @@ class WebRTCManager {
   setAudioMute(muted) {
     this.isAudioMuted = !!muted;
     if (this.localStream) {
-      this.localStream.getAudioTracks().forEach(t => (t.enabled = !this.isAudioMuted));
+      this.localStream.getAudioTracks().forEach(t => {
+        if (!this.dummyAudioTrack || t !== this.dummyAudioTrack) {
+          t.enabled = !this.isAudioMuted;
+        }
+      });
     }
     if (this.pc) {
       this.pc.getSenders().forEach(sender => {
         if (sender.track && sender.track.kind === 'audio') {
-          sender.track.enabled = !this.isAudioMuted;
+          // Never unmute a dummy audio track placeholder; only real microphones transmit
+          if (this.dummyAudioTrack && sender.track === this.dummyAudioTrack) {
+            sender.track.enabled = false;
+          } else {
+            sender.track.enabled = !this.isAudioMuted;
+          }
         }
       });
     }
@@ -491,12 +522,27 @@ class WebRTCManager {
       const AudioCtx = window.AudioContext || window.webkitAudioContext;
       if (AudioCtx) {
         const ctx = new AudioCtx();
-        const osc = ctx.createOscillator();
+        // Generate pure digital silence buffer (all samples 0.0, strictly no sinusoidal frequency)
+        const buffer = ctx.createBuffer(1, ctx.sampleRate, ctx.sampleRate);
+        const source = ctx.createBufferSource();
+        source.buffer = buffer;
+        source.loop = true;
+
+        // Route through zero-gain node to guarantee absolute zero sound output
+        const silentGain = ctx.createGain();
+        silentGain.gain.setValueAtTime(0, ctx.currentTime);
+        silentGain.gain.value = 0;
+
         const dst = ctx.createMediaStreamDestination();
-        osc.connect(dst);
-        osc.start();
+        source.connect(silentGain);
+        silentGain.connect(dst);
+        source.start();
+
         const track = dst.stream.getAudioTracks()[0];
-        track.enabled = false;
+        if (track) {
+          track.enabled = false;
+        }
+        this.dummyAudioCtx = ctx;
         return track;
       }
     } catch (e) {
@@ -609,13 +655,14 @@ class WebRTCManager {
     this.initPeerConnectionBase();
 
     // STEP 1: Strict Audio Ordering (Always Transceiver index 0 -> mid:0)
-    const localAudioTrack = (this.localStream && this.localStream.getAudioTracks().length > 0)
+    const hasLocalAudio = !!(this.localStream && this.localStream.getAudioTracks().length > 0);
+    const localAudioTrack = hasLocalAudio
       ? this.localStream.getAudioTracks()[0]
       : this.createDummyAudioTrack();
-    this.dummyAudioTrack = localAudioTrack;
+    this.dummyAudioTrack = hasLocalAudio ? null : localAudioTrack;
 
     if (localAudioTrack) {
-      localAudioTrack.enabled = !this.isAudioMuted && (this.localStream && this.localStream.getAudioTracks().length > 0);
+      localAudioTrack.enabled = !this.isAudioMuted && hasLocalAudio;
       this.audioTransceiver = this.pc.addTransceiver(localAudioTrack, {
         direction: 'sendrecv',
         streams: [this.localStream || new MediaStream([localAudioTrack])]
@@ -808,12 +855,13 @@ class WebRTCManager {
     // Configure Audio Transceiver (MID 0)
     if (audioTrans) {
       audioTrans.direction = 'sendrecv';
-      const localAudioTrack = (this.localStream && this.localStream.getAudioTracks().length > 0)
+      const hasLocalAudio = !!(this.localStream && this.localStream.getAudioTracks().length > 0);
+      const localAudioTrack = hasLocalAudio
         ? this.localStream.getAudioTracks()[0]
         : this.createDummyAudioTrack();
-      this.dummyAudioTrack = localAudioTrack;
+      this.dummyAudioTrack = hasLocalAudio ? null : localAudioTrack;
       if (localAudioTrack) {
-        localAudioTrack.enabled = !this.isAudioMuted && (this.localStream && this.localStream.getAudioTracks().length > 0);
+        localAudioTrack.enabled = !this.isAudioMuted && hasLocalAudio;
         try { await audioTrans.sender.replaceTrack(localAudioTrack); } catch (e) { console.warn('audio replaceTrack:', e); }
       }
       this.audioTransceiver = audioTrans;
@@ -1051,6 +1099,10 @@ class WebRTCManager {
       if (this.dummyAudioTrack) {
         try { this.dummyAudioTrack.stop(); } catch (e) {}
         this.dummyAudioTrack = null;
+      }
+      if (this.dummyAudioCtx) {
+        try { this.dummyAudioCtx.close(); } catch (e) {}
+        this.dummyAudioCtx = null;
       }
       if (this.screenStream) {
         this.screenStream.getTracks().forEach(t => {

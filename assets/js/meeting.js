@@ -1171,19 +1171,49 @@ class MeetingController {
     this.syncParticipantTiles();
   }
 
+  positionPopup(popup, anchorEl) {
+    if (!popup || !anchorEl) return;
+    if (window.innerWidth <= 768) {
+      popup.style.position = 'fixed';
+      popup.style.bottom = '74px';
+      popup.style.left = '50%';
+      popup.style.right = 'auto';
+      popup.style.transform = 'translateX(-50%)';
+      popup.style.width = 'min(320px, calc(100vw - 24px))';
+      popup.style.maxWidth = 'calc(100vw - 24px)';
+    } else {
+      const rect = anchorEl.getBoundingClientRect();
+      const popupWidth = popup.offsetWidth || 230;
+      let left = rect.left;
+      if (left + popupWidth > window.innerWidth - 16) {
+        left = window.innerWidth - popupWidth - 16;
+      }
+      popup.style.position = 'fixed';
+      popup.style.bottom = `${Math.max(10, window.innerHeight - rect.top + 8)}px`;
+      popup.style.left = `${Math.max(12, left)}px`;
+      popup.style.right = 'auto';
+      popup.style.transform = 'none';
+      popup.style.width = 'auto';
+      popup.style.maxWidth = '340px';
+    }
+  }
+
   async setupDeviceMenus() {
     const micMenuBtn = document.getElementById('micMenuBtn');
     const micMenu = document.getElementById('micDeviceMenu');
     const camMenuBtn = document.getElementById('camMenuBtn');
     const camMenu = document.getElementById('camDeviceMenu');
+    const moreMenu = document.getElementById('moreOptionsMenu');
 
     if (micMenuBtn && micMenu) {
       micMenuBtn.addEventListener('click', async (e) => {
         e.stopPropagation();
         camMenu?.classList.remove('open');
+        moreMenu?.classList.remove('open');
         const isOpen = micMenu.classList.contains('open');
         if (!isOpen) {
           await this.populateMeetingAudioDevices(micMenu);
+          this.positionPopup(micMenu, micMenuBtn);
           micMenu.classList.add('open');
         } else {
           micMenu.classList.remove('open');
@@ -1195,9 +1225,11 @@ class MeetingController {
       camMenuBtn.addEventListener('click', async (e) => {
         e.stopPropagation();
         micMenu?.classList.remove('open');
+        moreMenu?.classList.remove('open');
         const isOpen = camMenu.classList.contains('open');
         if (!isOpen) {
           await this.populateMeetingVideoDevices(camMenu);
+          this.positionPopup(camMenu, camMenuBtn);
           camMenu.classList.add('open');
         } else {
           camMenu.classList.remove('open');
@@ -1212,8 +1244,9 @@ class MeetingController {
     if (mobileAudioBtn && micMenu) {
       mobileAudioBtn.addEventListener('click', async (e) => {
         e.stopPropagation();
-        document.getElementById('moreOptionsMenu')?.classList.remove('open');
+        moreMenu?.classList.remove('open');
         await this.populateMeetingAudioDevices(micMenu);
+        this.positionPopup(micMenu, mobileAudioBtn);
         micMenu.classList.add('open');
       });
     }
@@ -1221,7 +1254,7 @@ class MeetingController {
     if (mobileCamBtn) {
       mobileCamBtn.addEventListener('click', async (e) => {
         e.stopPropagation();
-        document.getElementById('moreOptionsMenu')?.classList.remove('open');
+        moreMenu?.classList.remove('open');
         const ok = await window.setuWebRTC.flipCamera();
         if (window.showToast) window.showToast(ok ? 'Camera switched' : 'Could not switch camera');
       });
@@ -1230,7 +1263,7 @@ class MeetingController {
     if (mobileTestBtn) {
       mobileTestBtn.addEventListener('click', (e) => {
         e.stopPropagation();
-        document.getElementById('moreOptionsMenu')?.classList.remove('open');
+        moreMenu?.classList.remove('open');
         if (window.openSettingsModal) {
           window.openSettingsModal('device-test');
         } else {
@@ -1242,6 +1275,7 @@ class MeetingController {
     window.addEventListener('click', () => {
       micMenu?.classList.remove('open');
       camMenu?.classList.remove('open');
+      moreMenu?.classList.remove('open');
     });
   }
 
@@ -1450,7 +1484,20 @@ class MeetingController {
     if (moreBtn && moreMenu) {
       moreBtn.addEventListener('click', (e) => {
         e.stopPropagation();
-        moreMenu.classList.toggle('open');
+        document.getElementById('micDeviceMenu')?.classList.remove('open');
+        document.getElementById('camDeviceMenu')?.classList.remove('open');
+        const isOpen = moreMenu.classList.contains('open');
+        if (!isOpen) {
+          this.positionPopup(moreMenu, moreBtn);
+          moreMenu.classList.add('open');
+        } else {
+          moreMenu.classList.remove('open');
+        }
+      });
+      moreMenu.addEventListener('click', (e) => {
+        if (e.target.closest('.menu-item')) {
+          moreMenu.classList.remove('open');
+        }
       });
       window.addEventListener('click', () => moreMenu.classList.remove('open'));
     }

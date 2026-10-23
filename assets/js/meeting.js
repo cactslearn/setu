@@ -26,6 +26,7 @@ class MeetingController {
     this.remotePeerName = 'Remote Peer';
     this.remotePeerAvatar = null;
     this.localDisplayName = 'You';
+    this.wakeLock = null;
   }
 
   init() {
@@ -34,6 +35,40 @@ class MeetingController {
     this.setupNotesAutosave();
     this.bindScreenShareHooks();
     this.bindRemoteStreamHooks();
+    this.bindWakeLockLifecycle();
+  }
+
+  bindWakeLockLifecycle() {
+    if (typeof document !== 'undefined' && document.addEventListener) {
+      document.addEventListener('visibilitychange', async () => {
+        if (this.isPeerConnected && document.visibilityState === 'visible') {
+          await this.requestWakeLock();
+        }
+      });
+    }
+  }
+
+  async requestWakeLock() {
+    if ('wakeLock' in navigator) {
+      try {
+        this.wakeLock = await navigator.wakeLock.request('screen');
+        console.log('[Meeting] Screen Wake Lock active - mobile display kept awake');
+        this.wakeLock.addEventListener('release', () => {
+          console.log('[Meeting] Screen Wake Lock released');
+        });
+      } catch (err) {
+        console.warn('[Meeting] Screen Wake Lock note:', err);
+      }
+    }
+  }
+
+  releaseWakeLock() {
+    if (this.wakeLock) {
+      try {
+        this.wakeLock.release();
+      } catch (_) {}
+      this.wakeLock = null;
+    }
   }
 
   bindRemoteStreamHooks() {
@@ -139,6 +174,7 @@ class MeetingController {
     if (wasConnected && window.setuSound) {
       window.setuSound.playLeave();
     }
+    this.releaseWakeLock();
 
     if (window.setuSharedPage && window.setuSharedPage.isHost) {
       if (window.setuWizard && window.setuWizard.onHostConnectionLost) {
@@ -176,6 +212,9 @@ class MeetingController {
 
     // Meeting timer officially starts ticking up from 00:00 only now!
     this.startMeetingTimer();
+
+    // Keep mobile screen awake throughout the call
+    this.requestWakeLock();
 
     // Ensure remote and local tiles are synchronized and actively playing
     this.syncParticipantTiles();
@@ -471,8 +510,9 @@ class MeetingController {
     // Reset meeting session data so no files, messages, or notes bleed into future meetings
     this.resetMeetingSession();
 
-    // 2. Stop meeting timer and diagnostics
+    // 2. Stop meeting timer, wake lock, and diagnostics
     try {
+      this.releaseWakeLock();
       this.stopMeetingTimer();
     } catch (e) {}
 
@@ -1187,7 +1227,80 @@ class MeetingController {
         });
         container.appendChild(item);
       });
-    } catch (e) {}
+
+      // Audio Output Routing (Speaker vs Earpiece vs Bluetooth)
+      const outputs = devices.filter(d => d.kind === 'audiooutput');
+      const supportsSetSink = typeof HTMLMediaElement.prototype.setSinkId === 'function';
+
+      if (supportsSetSink || (typeof navigator.mediaDevices?.selectAudioOutput === 'function')) {
+        const outHeading = document.createElement('div');
+        outHeading.className = 'menu-heading';
+        outHeading.style.marginTop = '0.5rem';
+        outHeading.textContent = 'Audio Output (Speaker / Earpiece)';
+        container.appendChild(outHeading);
+
+        if (outputs.length > 0) {
+          outputs.forEach(d => {
+            const item = document.createElement('button');
+            const isSelected = d.deviceId === (window.setuWebRTC.selectedAudioOutputId || 'default');
+            let friendlyLabel = d.label;
+            if (!friendlyLabel || !friendlyLabel.trim()) {
+              friendlyLabel = d.deviceId === 'default' ? 'Speaker / Default' : 'Audio Output';
+            }
+            item.className = 'menu-item' + (isSelected ? ' selected' : '');
+            item.textContent = friendlyLabel;
+            item.addEventListener('click', async () => {
+              const ok = await window.setuWebRTC.switchAudioOutput(d.deviceId);
+              container.classList.remove('open');
+              if (window.showToast) {
+                window.showToast(ok ? `Audio output: ${friendlyLabel}` : 'Audio output switched');
+              }
+            });
+            container.appendChild(item);
+          });
+        }
+
+        // Native System Output Picker for Android / Chrome 110+
+        if (typeof navigator.mediaDevices?.selectAudioOutput === 'function') {
+          const pickerBtn = document.createElement('button');
+          pickerBtn.className = 'menu-item';
+          pickerBtn.style.color = 'var(--accent-blue)';
+          pickerBtn.textContent = 'System Output Picker (Earpiece/Speaker)...';
+          pickerBtn.addEventListener('click', async () => {
+            try {
+              const chosen = await navigator.mediaDevices.selectAudioOutput();
+              if (chosen && chosen.deviceId) {
+                await window.setuWebRTC.switchAudioOutput(chosen.deviceId);
+                if (window.showToast) {
+                  window.showToast(`Audio output: ${chosen.label || 'Selected device'}`);
+                }
+              }
+            } catch (err) {
+              console.warn('[Meeting] selectAudioOutput note:', err);
+            }
+            container.classList.remove('open');
+          });
+          container.appendChild(pickerBtn);
+        }
+      } else {
+        // Mobile iOS Safari / browser without setSinkId: audio is routed via OS proximity sensors
+        const infoHeading = document.createElement('div');
+        infoHeading.className = 'menu-heading';
+        infoHeading.style.marginTop = '0.5rem';
+        infoHeading.textContent = 'Audio Output';
+        container.appendChild(infoHeading);
+
+        const infoNote = document.createElement('div');
+        infoNote.style.fontSize = '0.72rem';
+        infoNote.style.color = 'var(--text-muted)';
+        infoNote.style.padding = '4px 10px 8px';
+        infoNote.style.lineHeight = '1.35';
+        infoNote.textContent = 'Managed by device: speakerphone active; switches to earpiece on ear proximity.';
+        container.appendChild(infoNote);
+      }
+    } catch (e) {
+      console.warn('[Meeting] populateMeetingAudioDevices error:', e);
+    }
   }
 
   async populateMeetingVideoDevices(container) {

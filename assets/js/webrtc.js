@@ -277,15 +277,27 @@ class WebRTCManager {
 
   /**
    * Switches speaker/audio output sink if supported by browser.
+   * Routes remote inbound audio to the chosen sink (earpiece, speakerphone, bluetooth).
    */
-  async switchAudioOutput(videoElement, sinkId) {
-    this.selectedAudioOutputId = sinkId;
-    if (videoElement && typeof videoElement.setSinkId === 'function') {
+  async switchAudioOutput(targetOrSinkId, sinkId = null) {
+    let target = document.getElementById('remoteAudio');
+    let id = targetOrSinkId;
+
+    if (targetOrSinkId && typeof targetOrSinkId === 'object' && 'setSinkId' in targetOrSinkId) {
+      target = targetOrSinkId;
+      id = sinkId;
+    }
+
+    if (id) {
+      this.selectedAudioOutputId = id;
+    }
+
+    if (target && typeof target.setSinkId === 'function' && id) {
       try {
-        await videoElement.setSinkId(sinkId);
+        await target.setSinkId(id);
         return true;
       } catch (err) {
-        console.warn('setSinkId failed:', err);
+        console.warn('[WebRTC] setSinkId failed:', err);
       }
     }
     return false;
@@ -597,6 +609,9 @@ class WebRTCManager {
         const audioEl = document.getElementById('remoteAudio');
         if (audioEl) {
           audioEl.srcObject = new MediaStream([track]);
+          if (this.selectedAudioOutputId && typeof audioEl.setSinkId === 'function') {
+            audioEl.setSinkId(this.selectedAudioOutputId).catch(() => {});
+          }
           audioEl.play().catch(async () => {
             const unlock = () => {
               audioEl.play().catch(() => {});

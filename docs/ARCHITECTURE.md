@@ -9,7 +9,8 @@ Setu P2P is built on a **strictly serverless, static website architecture**. Unl
        │                      (SRTP / DTLS DataChannels)               │
        │                                                              │
        ├────── Local IndexedDB (Messages, Contacts, Notes)             ├────── Local IndexedDB
-       └────── Manual / QR Code Exchange (Non-Trickle ICE)            └────── Manual / QR Code Exchange
+       ├────── Manual / QR / Room Code API Signaling                   ├────── Manual / QR / Room Code API Signaling
+       └────── Setu Companion Daemon (ws://127.0.0.1:49152)            └────── Setu Companion Daemon (Optional)
 ```
 
 ---
@@ -71,3 +72,37 @@ Because there is no signaling server, Setu uses **Manual Non-Trickle ICE Exchang
 - Provides a purpose-built interactive whiteboard and synchronized scratchpad within the browser.
 - **Host Authorization:** The session host must explicitly check "Allow Peer Drawing" to accept remote coordinates. If revoked, all inbound drawing events are ignored.
 - Strictly isolated to the canvas element; zero access to operating system controls.
+
+### 2.8 Remote Desktop Control Subsystem (`assets/js/remote-control.js` & `companion/`)
+- **Native OS Input Injection via Companion Daemon:** Browser sandboxes cannot inject OS-level clicks or keystrokes. Setu pairs the browser with Setu Companion, an unprivileged native daemon running on `127.0.0.1`.
+- **Pre-Shared Session Passkey Authentication:** Connections over the loopback WebSocket (`ws://127.0.0.1:49152`) require a cryptographically randomized session passkey (`setu_sec_...`). Unauthenticated sockets are dropped immediately.
+- **Normalized Floating Coordinates:** Pointer positions are calculated relative to the shared video bounding box and transmitted as normalized `0.0` to `1.0` floats, dynamically scaled to target screen dimensions by the companion.
+- **Double Cursor Suppression:** Active remote control suppresses the controller's local cursor (`cursor: none;`) over the video stream, rendering only the host's actual pointer position to eliminate visual confusion.
+- **Multi-Stage Host Consent:** The host must check "Allow Remote Control", approve the remote peer's request modal, and can click "Revoke Control" at any moment. Physical mouse movement by the host overrides remote input for 2.0 seconds.
+- For complete specifications, see [docs/REMOTE_CONTROL.md](REMOTE_CONTROL.md).
+
+### 2.9 Smart Room Signaling & API Fallback (`assets/js/room-signaling.js`)
+- **Human-Friendly 8-Character Room Codes:** Supports simple room codes formatted as `SETU-XXXX-XXXX` for instant entry alongside manual Base64 payload exchange.
+- **Automated Offer Probing & Role Resolution:** When entering a room code, Setu probes the signaling gateway with a randomized jitter window (550ms to 800ms) to detect existing host offers and avoid simultaneous collision:
+  - If an active offer exists: Assumes the Joiner role, downloads the offer, and publishes an encrypted answer.
+  - If no offer exists: Assumes the Host role, initializes WebRTC, and publishes an offer.
+- **Bandwidth Conservation (Polling Lifecycle):** Polling against the signaling gateway is terminated immediately once the direct P2P connection reaches `connected` state.
+
+### 2.10 Built-in Audio Notification Service (`assets/js/sound.js`)
+- **Zero-Asset Web Audio API Synthesizer:** Produces clean, harmonic acoustic cues directly from browser audio synthesis without loading external MP3 or WAV files.
+- **Harmonic Event Chimes:**
+  - Participant Join: Upward dual-tone (C5 at 523.25 Hz to E5 at 659.25 Hz) with gentle exponential decay (0.38s).
+  - Participant Disconnect: Soft downward dual-tone (E5 at 659.25 Hz to A4 at 440.00 Hz) indicating disconnection (0.38s).
+  - Chat Message: Crisp high ping (A5 at 880 Hz to D6 at 1174.66 Hz, 0.20s).
+  - Hand Raise: Dual-tone notification chime (G5 at 783.99 Hz to B5 at 987.77 Hz, 0.30s).
+- **User Preference:** Audio notifications can be toggled on or off in the Settings dialog (`prefMeetingSoundsCheckbox`) and persist in IndexedDB.
+
+### 2.11 Connection Resilience & Disconnect Monitoring (`assets/js/meeting.js` & `assets/js/webrtc.js`)
+- **State Transition Guards:** Monitors `pc.connectionState` and `pc.iceConnectionState`. Transient network interruptions trigger visual status badges and automatic signaling retry prompts.
+- **Silent Track Synthesis:** WebRTC placeholder tracks use synthesized digital silence buffers (zero amplitude with gain 0.0) to maintain valid audio clock synchronization without transmitting audible tones or 440 Hz beeps.
+- **Audio Constraints:** Default capture enables acoustic echo cancellation, background noise suppression, and auto-gain control to eliminate acoustic feedback.
+
+### 2.12 Presenter Screen Share Layout Management
+- **Local Presenter Card Isolation:** When a participant shares their screen, Setu routes local presentation feedback to a dedicated `#localPresenterCard` container rather than overwriting main remote video elements. This eliminates local video flickering and preserves full visual visibility of remote participants.
+- **Hardware Camera Release:** Disabling video explicitly stops underlying media stream tracks so camera hardware indicators and LED lights turn completely off.
+

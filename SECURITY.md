@@ -1,29 +1,36 @@
 # Security Policy
 
-Setu P2P is engineered with privacy and security as first-class primitives. This document outlines our threat model, security principles, and the responsible disclosure process for security vulnerabilities.
+Setu P2P is engineered with privacy and security as first-class primitives. This document outlines our high-level security model, known architectural limitations, and the responsible disclosure process for security vulnerabilities in accordance with GitHub standard security policies.
+
+For the in-depth cryptographic specifications, key sizes, and threat mitigations, refer to [docs/SECURITY.md](docs/SECURITY.md).
 
 ---
 
-## 🔒 Security Model & Principles
+## Security Model & Principles
 
 1. **End-to-End Transport Encryption:**
    - All media (audio, video, screen share) is encrypted using standard WebRTC SRTP (Secure Real-time Transport Protocol).
    - Data channels are encrypted using DTLS (Datagram Transport Layer Security) with ephemeral cryptographic keys generated per session.
 2. **Short Authentication String (SAS) Verification:**
    - WebRTC encryption alone does not verify the human identity of the remote participant.
-   - Setu P2P generates a 6-digit verification code and a 4-emoji fingerprint derived from the combined DTLS certificate hashes. Participants should verify these tokens over an out-of-band channel (e.g., trusted phone call) to detect potential active man-in-the-middle attacks during signaling payload exchange.
+   - Setu P2P generates a 6-digit verification code and visual verification tokens derived from the combined DTLS certificate hashes. Participants should verify these tokens over an out-of-band channel (e.g., trusted phone call) to detect potential active man-in-the-middle attacks during signaling payload exchange.
 3. **Local-Only Storage & WebCrypto Encryption:**
    - Chat history, notes, and contacts are stored strictly in client-side IndexedDB.
    - Optional local encryption uses AES-GCM (256-bit) with keys derived via PBKDF2 (100,000 iterations of SHA-256) from a user-supplied passphrase.
 4. **Sandboxed File Transfers:**
    - Files are transferred in 64KB binary chunks directly between peers.
    - Cryptographic SHA-256 integrity verification is performed on the complete binary stream before prompting the recipient to save the file.
-5. **No Telemetry or Third-Party Loggers:**
+5. **Remote Desktop Control Guardrails & Localhost Isolation:**
+   - Companion daemon binds strictly to IPv4 loopback (`127.0.0.1`) and never accepts outside network interfaces.
+   - Every session generates a high-entropy security passkey required for WebSocket authentication.
+   - Multi-step host consent (opt-in checkbox, approval modal, instant revocation button, emergency stop).
+   - Host physical mouse movement immediately suppresses remote inputs for 2.0 seconds.
+6. **No Telemetry or Third-Party Loggers:**
    - Zero analytics SDKs, session replay trackers, or external logging scripts are bundled.
 
 ---
 
-## ⚠️ Known Architectural Limitations
+## Known Architectural Limitations
 
 - **Browser Profile Access:** Data stored in IndexedDB is unencrypted unless the user explicitly enables local passphrase encryption. Anyone with access to your computer's operating system or browser profile directory could inspect unencrypted browser storage.
 - **NAT Traversal & IP Exposure:** During WebRTC connection establishment, IP addresses (local LAN and public IP via STUN) are exchanged inside the SDP payloads to establish peer-to-peer transport. If IP confidentiality is required, participants should use a VPN.
@@ -31,7 +38,7 @@ Setu P2P is engineered with privacy and security as first-class primitives. This
 
 ---
 
-## 🚨 Reporting a Vulnerability
+## Reporting a Vulnerability
 
 If you discover a security vulnerability in Setu P2P, please do NOT file a public issue.
 

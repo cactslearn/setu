@@ -1,0 +1,37 @@
+# Setu P2P
+
+> Open-source, strictly serverless, zero-backend WebRTC communication platform running entirely inside the web browser. Provides encrypted one-to-one audio/video calls, screen sharing, remote desktop control, encrypted chat, chunked file transfers, and consensual local recording without accounts, tracking, or central signaling infrastructure.
+
+## Core Architecture
+- **Serverless WebRTC:** Executed 100% inside browser runtime. Statically hostable on GitHub Pages, Cloudflare Pages, Netlify, or any static host.
+- **End-to-End Encryption:** DTLS 1.2/1.3 for DataChannels; SRTP (AES-CM 128/256-bit) for audio and video media streams.
+- **Peer Identity Verification:** Short Authentication String (SAS) combining DTLS certificate fingerprints into 6-digit confirmation codes and visual verification tokens to prevent Man-in-the-Middle (MITM) attacks.
+- **Multi-Modal Signaling:**
+  - Manual Non-Trickle ICE: Encrypted Base64 payloads (`SETU-v1:<checksum>:<base64>`) with Adler-32 validation.
+  - Visual QR Code: Camera-scanned bidirectional connection exchange.
+  - Smart Room Codes: 8-character human-friendly codes (`SETU-XXXX-XXXX`) with automated collision-avoidance probing via ephemeral serverless gateways.
+
+## Key Capabilities & Modules
+- **Remote Desktop Control:** Consensual remote input control during screen sharing. Pairs browser WebRTC `control` DataChannel with native Setu Companion daemon over local loopback (`ws://127.0.0.1:49152`). Features pre-shared session passkey auth, normalized float coordinates (`[0.0, 1.0]`), double-cursor suppression, and host physical override supremacy.
+- **Audio Notification Engine:** Browser-native Web Audio API synthesizer generating clean, harmonic event chimes for participant join, disconnect, chat messages, and hand-raise alerts without external audio assets.
+- **Real-Time DataChannel Chat:** Markdown-enabled chat stored in client-side IndexedDB with optional WebCrypto AES-GCM (256-bit) local passphrase encryption.
+- **Chunked File Transfer:** Binary streaming in 64KB chunks with backpressure management, mutual consent prompts, and cryptographic SHA-256 integrity verification.
+- **Consensual Local Recording:** In-browser audio/video compositing via `MediaRecorder` and Web Audio mixer. Both participants must grant consent; recordings save directly to local disk.
+- **Collaborative Whiteboard:** Interactive shared canvas with explicit host drawing authorization and instant revocation.
+- **Privacy Console:** Real-time data audit, configurable retention policies, and one-click Panic Wipe to permanently erase all local storage.
+
+## Key Technical Documents
+- [System Architecture](docs/ARCHITECTURE.md): Deep-dive architectural specification, subsystem data flows, and state machines.
+- [Remote Control Specification](docs/REMOTE_CONTROL.md): Complete daemon architecture, security model, and platform setup for Windows, macOS, and Linux.
+- [Security & Cryptography](docs/SECURITY.md): Threat models, cryptographic primitives, and mitigation strategies.
+- [Privacy Policy](docs/PRIVACY.md): Zero cloud data collection, IndexedDB scoping, and network metadata transparency.
+- [Consensual Recording Policy](docs/RECORDING.md): Technical constraints and mutual consent protocols.
+- [Deployment Guide](docs/DEPLOYMENT.md): Static deployment instructions for GitHub Pages, Nginx, Caddy, and Vercel.
+
+## Setu Companion (Native Input Daemon)
+- Source: `companion/`
+- Windows Bundle: `downloads/setu-companion-windows.zip`
+- macOS Bundle: `downloads/setu-companion-macos.zip`
+- Linux Bundle: `downloads/setu-companion-linux.zip`
+- Standalone Node.js Runner: `node companion/setu-companion.js --port 49152 --key "setu_sec_..."`
+- Native Rust Build: `cd companion && cargo build --release`

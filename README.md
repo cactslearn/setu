@@ -8,12 +8,14 @@
 
 ---
 
-## 🌟 Key Capabilities
+## Key Capabilities
 
 - **Strictly Serverless Architecture:** Hosted statically on GitHub Pages or any static web host. Zero project-operated signaling servers, presence services, account databases, or cloud storage.
-- **Manual & QR Code Connection Exchange:** Simple, guided copy-and-paste or camera-scanned QR code exchange with automatic non-trickle ICE gathering.
-- **DTLS/SRTP WebRTC Encryption:** Audio, video, and data channels are end-to-end encrypted across standard browser WebRTC APIs.
-- **Short Authentication String (SAS) Verification:** Generates cryptographic emoji tokens and 6-digit confirmation codes from DTLS fingerprints to prevent man-in-the-middle attacks over a secondary trusted channel.
+- **Manual, QR Code & Smart Room Signaling:** Guided copy-and-paste exchange, camera-scanned QR codes, or 8-character human-friendly room codes (`SETU-XXXX-XXXX`) with automated collision-avoidance probing.
+- **Remote Desktop Control:** Low-latency, consensual remote control during screen sharing powered by the native Setu Companion daemon. Features pre-shared session passkey authentication, configurable loopback ports, relative coordinate normalization, double-cursor suppression, and multi-stage host authorization with instant revocation.
+- **DTLS/SRTP WebRTC Encryption:** Audio, video, screen share, and data channels are end-to-end encrypted across standard browser WebRTC APIs.
+- **Short Authentication String (SAS) Verification:** Generates visual verification tokens and 6-digit confirmation codes from DTLS fingerprints to prevent man-in-the-middle attacks over a secondary trusted channel.
+- **Built-in Audio Notification Chimes:** Browser-native Web Audio API synthesizer for zero-asset, zero-latency chimes on participant join, disconnect, chat message, and hand-raise events.
 - **Real-Time DataChannel Chat:** Markdown-enabled messaging with local persistence in browser IndexedDB, search, export to JSON, and optional WebCrypto AES-GCM local passphrase encryption.
 - **Chunked P2P File Transfers:** Transfer files of any type in 64KB chunks with backpressure management, mutual consent prompts, and cryptographic SHA-256 integrity checks before saving.
 - **Consensual Local Recording:** Audio/video compositing and Web Audio mixing via browser `MediaRecorder`. Both participants must grant consent before recording commences. Recordings stay on the local device.
@@ -23,7 +25,7 @@
 
 ---
 
-## 📁 Repository Structure
+## Repository Structure
 
 ```text
 setu/
@@ -34,9 +36,12 @@ setu/
 │   └── js/
 │       ├── app.js              # Coordinator, message dispatcher & shortcuts
 │       ├── storage.js          # IndexedDB engine with AES-GCM encryption
+│       ├── sound.js            # Synthesized Web Audio notification engine
 │       ├── signaling.js        # Non-trickle ICE payload packaging & validation
+│       ├── room-signaling.js   # 8-character room codes & automated API probing
 │       ├── identity.js         # SAS cryptographic verification & fingerprints
 │       ├── webrtc.js           # RTCPeerConnection, tracks & DataChannels
+│       ├── remote-control.js   # Remote desktop controller & companion bridge
 │       ├── presence.js         # Availability statuses & idle detection
 │       ├── chat.js             # DataChannel chat, Markdown & export
 │       ├── file-transfer.js    # Chunked file streaming & SHA-256 validation
@@ -45,10 +50,13 @@ setu/
 │       ├── qr-exchange.js      # Visual QR code generation & camera scanner
 │       ├── shared-page.js      # Collaborative whiteboard with host permissions
 │       ├── privacy.js          # Privacy auditor, retention & panic wipe
-│       ├── connection-ui.js    # 4-step guided Host/Join connection wizard
+│       ├── connection-ui.js    # Guided Host/Join connection wizard
 │       └── meeting.js          # Media controls, 1-hour session timer & PIP
+├── companion/                  # Setu Companion native input daemon (Rust / Node.js)
+├── downloads/                  # Pre-packaged companion bundles (Windows, macOS, Linux)
 ├── docs/
 │   ├── ARCHITECTURE.md         # Deep-dive system architecture & data flows
+│   ├── REMOTE_CONTROL.md       # Remote control architecture, security & setup
 │   ├── PRIVACY.md              # Local storage, WebRTC traffic & metadata
 │   ├── DISCLAIMER.md           # As-is warranty & liability limitations
 │   ├── DEPLOYMENT.md           # Static deployment guide (GitHub Pages)
@@ -62,7 +70,7 @@ setu/
 
 ---
 
-## 🚀 Quick Start (Local Development)
+## Quick Start (Local Development)
 
 Because Setu P2P is a static web application, no build steps or backend servers are required.
 
@@ -89,8 +97,19 @@ Then navigate to `http://localhost:8000` in two separate browser tabs or windows
 
 ---
 
-## 🔄 Establishing a Connection
+## Establishing a Connection
 
+Setu supports two connection workflows:
+
+### Method A: Smart Room Code (Recommended)
+1. **Enter Room Code:**
+   - Both participants enter the same 8-character room code (e.g. `SETU-ABCD-1234`).
+2. **Automated Role Discovery:**
+   - Setu automatically probes the signaling gateway with collision-avoidance jitter. The first arrival automatically hosts, and the second arrival automatically joins and completes the encrypted handshake.
+3. **P2P Establishment:**
+   - Signaling polling stops immediately upon connection, establishing direct DTLS/SRTP streams.
+
+### Method B: Manual / QR Code Exchange
 1. **Host a Meeting:**
    - Click **"Host a Meeting"**.
    - Setu will gather public network routes (STUN) and create an invitation code starting with `SETU-v1:`.
@@ -100,22 +119,23 @@ Then navigate to `http://localhost:8000` in two separate browser tabs or windows
    - Setu automatically generates a reply answer code. The joiner copies and sends this back to the host.
 3. **Connect & Verify:**
    - The host pastes the joiner's reply code.
-   - Both participants review their 6-digit verification code and 4-emoji SAS tokens over voice to ensure authentic end-to-end communication.
+   - Both participants review their 6-digit verification code and visual tokens over voice to ensure authentic end-to-end communication.
    - Click **"Join Call Now"** to enter the meeting!
 
 ---
 
-## 🔒 Security & Privacy Guarantees
+## Security & Privacy Guarantees
 
-- **No Intermediate Servers:** Audio, video, files, and chat messages travel exclusively across encrypted peer-to-peer WebRTC connections.
+- **No Intermediate Media Servers:** Audio, video, files, and chat messages travel exclusively across encrypted peer-to-peer WebRTC connections.
 - **Local Data Ownership:** All chat logs, contacts, and preferences remain solely inside your browser's IndexedDB. Clearing your local data never impacts the remote participant's copy.
 - **Zero Telemetry:** No analytics scripts, tracking cookies, or external trackers are included.
+- **Remote Control Sovereignty:** Companion daemon binds strictly to `127.0.0.1` with per-session passkey authentication, configurable ports, and instant host physical override.
 - **Third-Party Services:** The only external network requests occur during the initial connection phase to public STUN servers (`stun.l.google.com:19302` or `stun.cloudflare.com:3478`) for NAT traversal candidate discovery.
 
-For more information, see [docs/PRIVACY.md](docs/PRIVACY.md) and [docs/SECURITY.md](docs/SECURITY.md).
+For more information, see [docs/PRIVACY.md](docs/PRIVACY.md), [docs/SECURITY.md](docs/SECURITY.md), and [docs/REMOTE_CONTROL.md](docs/REMOTE_CONTROL.md).
 
 ---
 
-## 📄 License
+## License
 
 Licensed under the Apache License, Version 2.0 (the "License"). You may obtain a copy of the License in the [LICENSE](LICENSE) file.

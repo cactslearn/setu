@@ -3,11 +3,143 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>Setu P2P — Secure Serverless Video Meetings</title>
-  <meta name="description" content="Open-source, strictly serverless, zero-backend WebRTC video calls, encrypted peer chat, chunked file transfers, and collaborative shared workspaces directly inside your browser.">
-  <meta name="keywords" content="WebRTC, P2P, Serverless, Video Call, Secure Chat, File Transfer, Open Source, GitHub Pages">
+  <title>Setu P2P — Secure Serverless Video Meetings &amp; Remote Control</title>
+  <meta name="description" content="Open-source, strictly serverless, zero-backend WebRTC video calls, encrypted peer chat, chunked file transfers, and remote desktop control directly inside your browser.">
+  <meta name="keywords" content="WebRTC, P2P, Serverless, Video Call, Secure Chat, File Transfer, Remote Desktop Control, Open Source, GitHub Pages">
   <meta name="author" content="Setu P2P Project">
-  
+  <meta name="theme-color" content="#0b0f17">
+  <link rel="canonical" href="./">
+
+  <!-- OpenGraph Metadata for Social & Search Sharing -->
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="Setu P2P">
+  <meta property="og:title" content="Setu P2P — Secure Serverless Video Meetings &amp; Remote Control">
+  <meta property="og:description" content="Open-source, strictly serverless, zero-backend WebRTC video calls, encrypted peer chat, chunked file transfers, and remote desktop control directly inside your browser.">
+  <meta property="og:url" content="./">
+  <meta property="og:image" content="assets/img/og-preview.png">
+
+  <!-- Twitter / X Card Metadata -->
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Setu P2P — Secure Serverless Video Meetings &amp; Remote Control">
+  <meta name="twitter:description" content="Open-source, strictly serverless, zero-backend WebRTC video calls, encrypted peer chat, chunked file transfers, and remote desktop control directly inside your browser.">
+  <meta name="twitter:image" content="assets/img/og-preview.png">
+
+  <!-- Font Preconnect for Core Web Vitals Optimization -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+
+  <!-- Structured Data (JSON-LD) for SEO, AEO & AI Search Knowledge Graphs -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "SoftwareApplication",
+        "@id": "#software",
+        "name": "Setu P2P",
+        "description": "Open-source, strictly serverless, zero-backend WebRTC video calls, encrypted peer chat, chunked file transfers, and remote desktop control directly inside your browser.",
+        "applicationCategory": "CommunicationApplication",
+        "operatingSystem": "Web Browser, Windows, macOS, Linux",
+        "offers": {
+          "@type": "Offer",
+          "price": "0",
+          "priceCurrency": "USD"
+        },
+        "license": "https://www.apache.org/licenses/LICENSE-2.0",
+        "softwareRequirements": "Modern web browser with WebRTC support (Chrome, Edge, Firefox, Safari)",
+        "featureList": [
+          "Serverless peer-to-peer WebRTC video calling",
+          "DTLS/SRTP end-to-end media encryption",
+          "Remote desktop control with Setu Companion daemon",
+          "Human-friendly 8-character smart room codes",
+          "Chunked P2P file transfers with SHA-256 verification",
+          "Consensual local recording via MediaRecorder",
+          "Browser-native Web Audio notification chimes",
+          "Short Authentication String (SAS) MITM verification",
+          "Client-side IndexedDB chat with optional AES-GCM encryption"
+        ]
+      },
+      {
+        "@type": "FAQPage",
+        "@id": "#faq",
+        "mainEntity": [
+          {
+            "@type": "Question",
+            "name": "What is Setu P2P?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Setu P2P is an open-source, strictly serverless WebRTC video conferencing application that runs entirely inside your browser without project-operated signaling servers, user accounts, or cloud databases."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Is Setu P2P private and encrypted?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Yes. All audio, video, screen shares, and chat messages travel directly between peers using DTLS and SRTP encryption. No data is stored on central cloud servers, and local browser data can be protected with client-side AES-GCM encryption."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Does Setu P2P support remote desktop control?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Yes. Setu includes a consensual remote desktop control system during screen sharing sessions. Presenters run the lightweight Setu Companion background daemon on their machine, which communicates over an authenticated loopback WebSocket (ws://127.0.0.1:49152) requiring a session passkey and interactive host approval."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "How does Setu establish calls without central signaling servers?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Setu supports manual non-trickle ICE exchange via copy-paste codes, camera-scannable QR codes, and human-friendly 8-character room codes (SETU-XXXX-XXXX) that automatically probe ephemeral serverless gateways with collision avoidance."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Are call recordings stored in the cloud?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "No. Recording requires mutual consent from both participants. Media is composited directly inside the browser using MediaRecorder and Web Audio API, saving the final video file directly to the user's local disk."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Is Setu P2P free and open source?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Yes. Setu P2P is 100% free and open-source software licensed under the Apache License 2.0. Anyone can self-host it on GitHub Pages, Cloudflare Pages, or any static web server."
+            }
+          }
+        ]
+      },
+      {
+        "@type": "HowTo",
+        "@id": "#howto",
+        "name": "How to Start a Direct Encrypted Meeting with Setu P2P",
+        "description": "Step-by-step instructions for establishing a peer-to-peer WebRTC video meeting.",
+        "step": [
+          {
+            "@type": "HowToStep",
+            "name": "Enter Room Code or Host",
+            "text": "Open Setu P2P and enter an 8-character room code (e.g., SETU-ABCD-1234) or click 'Host a Meeting'."
+          },
+          {
+            "@type": "HowToStep",
+            "name": "Exchange Connection Offer",
+            "text": "Share the room code or send the generated invitation code/QR to your peer."
+          },
+          {
+            "@type": "HowToStep",
+            "name": "Verify SAS and Connect",
+            "text": "Verify the 6-digit confirmation code and visual SAS tokens over voice to ensure end-to-end authenticity, then start the call."
+          }
+        ]
+      }
+    ]
+  }
+  </script>
+
   <!-- CSS Stylesheet -->
   <link rel="stylesheet" href="assets/css/app.css">
 </head>
@@ -85,11 +217,11 @@
     <section id="welcomeSection" class="view-panel active" aria-labelledby="welcomeHeading">
       <div class="welcome-container">
         <h1 id="welcomeHeading" class="welcome-title">
-          Private, direct video meetings.<br>
+          Private, direct video meetings &amp; remote control.<br>
           No accounts, no central servers.
         </h1>
         <p class="welcome-subtitle">
-          End-to-end encrypted video, screen sharing, file transfer, and collaborative whiteboards directly between browsers.
+          End-to-end encrypted video, screen sharing, remote desktop control, file transfer, and collaborative whiteboards directly between browsers.
         </p>
 
         <!-- Action Cards: Host or Join -->
@@ -154,6 +286,50 @@
           </div>
           <div id="contactsChipsList" style="display: flex; flex-wrap: wrap; gap: 0.45rem;"></div>
         </div>
+
+        <!-- Semantic FAQ & Architecture Landmark for AEO & AI Search Direct Answering -->
+        <section class="welcome-faq-section" aria-labelledby="faqHeading">
+          <h2 id="faqHeading" class="welcome-faq-title">Frequently Asked Questions &amp; Architecture</h2>
+          <div class="welcome-faq-list">
+            <details class="welcome-faq-item">
+              <summary>What is Setu P2P?</summary>
+              <p>Setu P2P is an open-source, strictly serverless WebRTC video conferencing application running entirely inside your web browser without project-operated signaling servers, user accounts, or cloud databases.</p>
+            </details>
+            <details class="welcome-faq-item">
+              <summary>Does Setu support remote desktop control?</summary>
+              <p>Yes. Setu includes consensual remote desktop control during screen sharing sessions. Presenters run the lightweight native Setu Companion daemon on their machine over an authenticated loopback WebSocket (<code>ws://127.0.0.1:49152</code>) requiring session passkeys, relative coordinate scaling, and multi-step host approval.</p>
+            </details>
+            <details class="welcome-faq-item">
+              <summary>Is Setu P2P private and encrypted?</summary>
+              <p>Yes. Audio, video, and screen sharing streams are encrypted using WebRTC SRTP (AES-CM), and data channels use DTLS 1.2/1.3. Local chat messages can be encrypted with client-side AES-GCM (256-bit) using WebCrypto PBKDF2.</p>
+            </details>
+            <details class="welcome-faq-item">
+              <summary>How does Setu establish calls without central servers?</summary>
+              <p>Setu supports manual non-trickle ICE exchange via copy-paste codes, camera-scannable QR codes, and human-friendly 8-character room codes (<code>SETU-XXXX-XXXX</code>) with automated collision-avoidance probing via ephemeral serverless gateways.</p>
+            </details>
+            <details class="welcome-faq-item">
+              <summary>Are calls or recordings stored in the cloud?</summary>
+              <p>No. Recording requires mutual consent from both participants. Media is mixed locally inside the browser using MediaRecorder and Web Audio API, saving the final video file directly to the user's local disk.</p>
+            </details>
+            <details class="welcome-faq-item">
+              <summary>Is Setu free and open source?</summary>
+              <p>Yes. Setu P2P is 100% free and open source licensed under the Apache License 2.0. You can self-host it statically on GitHub Pages, Cloudflare Pages, or any web server.</p>
+            </details>
+          </div>
+        </section>
+
+        <!-- Semantic Accessible Footer Landmark -->
+        <footer class="app-footer" role="contentinfo">
+          <span>Setu P2P - Strictly Serverless WebRTC</span>
+          <nav class="footer-nav" aria-label="Documentation links">
+            <a href="docs/ARCHITECTURE.md">Architecture</a>
+            <a href="docs/REMOTE_CONTROL.md">Remote Control</a>
+            <a href="docs/SECURITY.md">Security</a>
+            <a href="docs/PRIVACY.md">Privacy</a>
+            <a href="docs/DEPLOYMENT.md">Deployment</a>
+            <a href="llms.txt">llms.txt</a>
+          </nav>
+        </footer>
       </div>
     </section>
 

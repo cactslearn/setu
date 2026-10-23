@@ -10,3 +10,10 @@ Third-Party Components & Attributions:
 - Public STUN Servers:
   - Google Public STUN: stun.l.google.com:19302 (Used for NAT traversal candidate discovery).
   - Cloudflare STUN: stun.cloudflare.com:3478.
+- Setu Companion Native Input Subsystem:
+  - Enigo (Cross-platform OS input simulation): MIT / Apache 2.0 License.
+  - Tokio & Tokio-Tungstenite (Asynchronous runtime & WebSockets): MIT License.
+  - Serde & Serde-JSON (Serialization framework): MIT / Apache 2.0 License.
+- Signaling Gateways & Relays:
+  - Ephemeral serverless API relay protocol for automated room-code handshake.
+

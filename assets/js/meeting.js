@@ -1205,6 +1205,40 @@ class MeetingController {
       });
     }
 
+    const mobileAudioBtn = document.getElementById('mobileSwitchAudioOptionBtn');
+    const mobileCamBtn = document.getElementById('mobileSwitchCameraOptionBtn');
+    const mobileTestBtn = document.getElementById('mobileDeviceTestOptionBtn');
+
+    if (mobileAudioBtn && micMenu) {
+      mobileAudioBtn.addEventListener('click', async (e) => {
+        e.stopPropagation();
+        document.getElementById('moreOptionsMenu')?.classList.remove('open');
+        await this.populateMeetingAudioDevices(micMenu);
+        micMenu.classList.add('open');
+      });
+    }
+
+    if (mobileCamBtn) {
+      mobileCamBtn.addEventListener('click', async (e) => {
+        e.stopPropagation();
+        document.getElementById('moreOptionsMenu')?.classList.remove('open');
+        const ok = await window.setuWebRTC.flipCamera();
+        if (window.showToast) window.showToast(ok ? 'Camera switched' : 'Could not switch camera');
+      });
+    }
+
+    if (mobileTestBtn) {
+      mobileTestBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        document.getElementById('moreOptionsMenu')?.classList.remove('open');
+        if (window.openSettingsModal) {
+          window.openSettingsModal('device-test');
+        } else {
+          document.getElementById('openSettingsBtn')?.click();
+        }
+      });
+    }
+
     window.addEventListener('click', () => {
       micMenu?.classList.remove('open');
       camMenu?.classList.remove('open');
@@ -1307,6 +1341,18 @@ class MeetingController {
     try {
       const devices = await navigator.mediaDevices.enumerateDevices();
       container.innerHTML = '<div class="menu-heading">Select Camera</div>';
+
+      const flipBtn = document.createElement('button');
+      flipBtn.className = 'menu-item';
+      flipBtn.style.color = 'var(--accent-blue)';
+      flipBtn.style.fontWeight = '600';
+      flipBtn.textContent = 'Flip Camera (Front / Back)';
+      flipBtn.addEventListener('click', async () => {
+        const ok = await window.setuWebRTC.flipCamera();
+        container.classList.remove('open');
+        if (window.showToast) window.showToast(ok ? 'Camera flipped' : 'Could not flip camera');
+      });
+      container.appendChild(flipBtn);
 
       devices.filter(d => d.kind === 'videoinput').forEach(d => {
         const item = document.createElement('button');

@@ -669,7 +669,11 @@
               <button id="toggleMoreOptionsBtn" class="meet-ctrl-btn more-options-btn" style="display: none;" title="More options" aria-label="More options">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="1"></circle><circle cx="12" cy="5" r="1"></circle><circle cx="12" cy="19" r="1"></circle></svg>
               </button>
-              <div id="moreOptionsMenu" class="device-select-popup" style="right: 0; left: auto; bottom: calc(100% + 12px); min-width: 210px;">
+              <div id="moreOptionsMenu" class="device-select-popup" style="right: 0; left: auto; bottom: calc(100% + 12px); min-width: 220px;">
+                <button class="menu-item" id="mobileSwitchAudioOptionBtn">Audio Devices (Speaker / Earpiece)</button>
+                <button class="menu-item" id="mobileSwitchCameraOptionBtn">Switch Camera (Front / Back)</button>
+                <button class="menu-item" id="mobileDeviceTestOptionBtn">Test Camera &amp; Mic</button>
+                <div style="height: 1px; background: var(--border-subtle); margin: 0.25rem 0;"></div>
                 <button class="menu-item" onclick="document.getElementById('togglePeopleDrawerBtn')?.click()">People (<span id="morePeopleCountBadge">2</span>)</button>
                 <button class="menu-item" onclick="document.getElementById('toggleFileDrawerBtn')?.click()">Send &amp; Receive Files</button>
                 <button class="menu-item" onclick="document.getElementById('toggleWhiteboardBtn')?.click()">Interactive Whiteboard</button>
@@ -1016,9 +1020,10 @@
 
           <div class="form-field-group" style="margin-top: 0.6rem;">
             <label class="form-label" for="audioOutputSelect">Speaker / Audio Output</label>
-            <div style="display: flex; gap: 0.5rem;">
-              <select id="audioOutputSelect" class="select-input" style="flex: 1;"></select>
-              <button id="soundTestBtn" class="btn btn-secondary btn-sm" type="button">Test Speaker</button>
+            <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+              <select id="audioOutputSelect" class="select-input" style="flex: 1; min-width: 160px;"></select>
+              <button id="soundTestBtn" class="btn btn-secondary btn-sm" type="button">Test Sound</button>
+              <button id="prejoinDeviceTestBtn" class="btn btn-secondary btn-sm" type="button" style="white-space: nowrap;">Device Test Suite</button>
             </div>
           </div>
 
@@ -1031,102 +1036,189 @@
     </div>
   </div>
 
-  <!-- Global Settings & User Profile Modal -->
+  <!-- Global Settings & User Profile Modal with Tabs -->
   <div id="settingsModal" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="settingsModalTitle">
-    <div class="dialog-card" style="max-width: 520px;">
+    <div class="dialog-card settings-dialog-card" style="max-width: 620px; max-height: 88vh; max-height: 88dvh; display: flex; flex-direction: column;">
       <div class="dialog-header">
-        <strong id="settingsModalTitle">Settings &amp; Profile</strong>
-        <button id="closeSettingsModalBtn" class="tool-icon-btn" style="width: 28px; height: 28px;">✕</button>
+        <strong id="settingsModalTitle">Settings &amp; Preferences</strong>
+        <button id="closeSettingsModalBtn" class="tool-icon-btn" style="width: 28px; height: 28px;" aria-label="Close settings">✕</button>
       </div>
-      <div class="dialog-body">
+
+      <!-- Settings Horizontal Tabs Navigation Bar -->
+      <nav class="settings-tabs-nav" role="tablist" aria-label="Settings categories">
+        <button class="settings-tab-btn active" role="tab" aria-selected="true" data-tab="general" id="settingsTabBtnGeneral">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+          <span>General</span>
+        </button>
+        <button class="settings-tab-btn" role="tab" aria-selected="false" data-tab="audio" id="settingsTabBtnAudio">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="23"></line></svg>
+          <span>Audio</span>
+        </button>
+        <button class="settings-tab-btn" role="tab" aria-selected="false" data-tab="video" id="settingsTabBtnVideo">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="23 7 16 12 23 17 23 7"></polygon><rect x="1" y="5" width="15" height="14" rx="2" ry="2"></rect></svg>
+          <span>Video</span>
+        </button>
+        <button class="settings-tab-btn" role="tab" aria-selected="false" data-tab="device-test" id="settingsTabBtnDeviceTest">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polygon points="10 8 16 12 10 16 10 8"></polygon></svg>
+          <span>Device Test</span>
+        </button>
+        <button class="settings-tab-btn" role="tab" aria-selected="false" data-tab="network" id="settingsTabBtnNetwork">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg>
+          <span>Network</span>
+        </button>
+        <button class="settings-tab-btn" role="tab" aria-selected="false" data-tab="remote" id="settingsTabBtnRemote">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg>
+          <span>Remote Control</span>
+        </button>
+      </nav>
+
+      <div class="dialog-body" style="overflow-y: auto; flex: 1;">
         
-        <!-- Profile Picture & Display Name -->
-        <div style="display: flex; gap: 1.25rem; align-items: center; padding-bottom: 1rem; border-bottom: 1px solid var(--border-subtle);">
-          <div style="position: relative;">
-            <div id="settingsAvatarPreview" class="profile-avatar-circle">
-              <span id="settingsAvatarInitial">Y</span>
-              <img id="settingsAvatarImg" style="display: none; width: 100%; height: 100%; object-fit: cover; border-radius: 50%;">
+        <!-- Tab 1: General & Profile -->
+        <div id="tab-general" class="settings-tab-pane active" role="tabpanel">
+          <!-- Profile Picture & Display Name -->
+          <div style="display: flex; gap: 1.25rem; align-items: center; padding-bottom: 1rem; border-bottom: 1px solid var(--border-subtle);">
+            <div style="position: relative;">
+              <div id="settingsAvatarPreview" class="profile-avatar-circle">
+                <span id="settingsAvatarInitial">Y</span>
+                <img id="settingsAvatarImg" style="display: none; width: 100%; height: 100%; object-fit: cover; border-radius: 50%;">
+              </div>
+              <input type="file" id="avatarFileInput" accept="image/*" style="display: none;">
             </div>
-            <input type="file" id="avatarFileInput" accept="image/*" style="display: none;">
+            <div style="flex: 1;">
+              <div style="font-weight: 600; font-size: 0.9rem;">Profile Picture</div>
+              <div style="font-size: 0.75rem; color: var(--text-muted); margin-bottom: 0.5rem;">Shown when camera is off and in the participants list.</div>
+              <div style="display: flex; gap: 0.5rem;">
+                <button id="uploadAvatarBtn" class="btn btn-secondary btn-sm" type="button">Upload Photo</button>
+                <button id="removeAvatarBtn" class="btn btn-secondary btn-sm" type="button" style="color: var(--accent-rose);">Remove</button>
+              </div>
+            </div>
           </div>
-          <div style="flex: 1;">
-            <div style="font-weight: 600; font-size: 0.9rem;">Profile Picture</div>
-            <div style="font-size: 0.75rem; color: var(--text-muted); margin-bottom: 0.5rem;">Shown when camera is off and in the participants list.</div>
+
+          <div class="form-field-group" style="margin-top: 1rem;">
+            <label class="form-label" for="profileDisplayNameInput">Your Display Name</label>
+            <input type="text" id="profileDisplayNameInput" class="select-input" placeholder="e.g. Alice Smith" value="You">
+          </div>
+
+          <div class="form-field-group" style="margin-top: 1rem;">
+            <label class="form-label" for="settingPersonalRoomCode">Personal Meeting Room Code (Reusable)</label>
             <div style="display: flex; gap: 0.5rem;">
-              <button id="uploadAvatarBtn" class="btn btn-secondary btn-sm" type="button">Upload Photo</button>
-              <button id="removeAvatarBtn" class="btn btn-secondary btn-sm" type="button" style="color: var(--accent-rose);">Remove</button>
+              <input type="text" id="settingPersonalRoomCode" class="select-input" placeholder="e.g. kpm-trvw-xzn" maxlength="32" style="font-family: var(--font-mono); letter-spacing: 0.5px;">
+              <button id="regeneratePersonalRoomCodeBtn" class="btn btn-secondary btn-sm" type="button" title="Generate fresh room code">Regenerate</button>
+              <button id="copyPersonalRoomLinkSettingsBtn" class="btn btn-secondary btn-sm" type="button" title="Copy permanent link">Copy Link</button>
+            </div>
+            <div style="font-size: 0.725rem; color: var(--text-muted); margin-top: 0.35rem;">
+              Both you and participants can join using this permanent reusable code or link at any time.
+            </div>
+          </div>
+
+          <!-- Meeting Default Preferences -->
+          <div style="margin-top: 1.25rem;">
+            <div style="font-weight: 600; font-size: 0.85rem; margin-bottom: 0.6rem;">Call Join Defaults</div>
+            <div style="display: flex; flex-direction: column; gap: 0.6rem;">
+              <label style="display: flex; align-items: center; gap: 0.6rem; font-size: 0.825rem; cursor: pointer;">
+                <input type="checkbox" id="prefMuteAudioCheckbox">
+                <span>Always join meetings with microphone muted</span>
+              </label>
+              <label style="display: flex; align-items: center; gap: 0.6rem; font-size: 0.825rem; cursor: pointer;">
+                <input type="checkbox" id="prefMuteVideoCheckbox">
+                <span>Always join meetings with camera turned off</span>
+              </label>
             </div>
           </div>
         </div>
 
-        <div class="form-field-group" style="margin-top: 1rem;">
-          <label class="form-label" for="profileDisplayNameInput">Your Display Name</label>
-          <input type="text" id="profileDisplayNameInput" class="select-input" placeholder="e.g. Alice Smith" value="You">
+        <!-- Tab 2: Audio Settings -->
+        <div id="tab-audio" class="settings-tab-pane" role="tabpanel">
+          <div style="font-weight: 700; font-size: 0.9rem; color: var(--text-main); margin-bottom: 0.5rem;">Audio Devices &amp; Optimization</div>
+          <div style="font-size: 0.75rem; color: var(--text-muted); margin-bottom: 1rem;">Configure your microphone and audio output (loudspeaker or earpiece). Changes take effect immediately.</div>
+
+          <!-- Microphone Source -->
+          <div class="form-field-group">
+            <label class="form-label" for="settingAudioInputSource">Microphone Input</label>
+            <select id="settingAudioInputSource" class="select-input">
+              <option value="">Default Microphone</option>
+            </select>
+            <div style="font-size: 0.725rem; color: var(--text-muted); margin-top: 0.25rem;">Select your active mic (built-in, wired headset, or Bluetooth).</div>
+          </div>
+
+          <!-- Audio Output / Speaker Sink -->
+          <div class="form-field-group" style="margin-top: 1rem;">
+            <label class="form-label" for="settingAudioOutputSink">Audio Output (Speaker / Earpiece)</label>
+            <div style="display: flex; gap: 0.5rem;">
+              <select id="settingAudioOutputSink" class="select-input" style="flex: 1;">
+                <option value="default">Speaker / Default</option>
+              </select>
+              <button id="settingAudioOutputPickerBtn" class="btn btn-secondary btn-sm" type="button" style="white-space: nowrap; display: none;">System Picker...</button>
+            </div>
+            <div id="settingAudioOutputNote" style="font-size: 0.725rem; color: var(--text-muted); margin-top: 0.35rem;">
+              Choose whether incoming voice routes to your device loudspeaker, earpiece, or connected headphones. On iOS devices, audio routing is handled automatically by the proximity sensor.
+            </div>
+          </div>
+
+          <!-- Audio Quality & Effects -->
+          <div style="margin-top: 1.25rem; border-top: 1px solid var(--border-subtle); padding-top: 1rem;">
+            <div style="font-weight: 600; font-size: 0.85rem; margin-bottom: 0.6rem;">Audio Processing &amp; Chimes</div>
+            <div style="display: flex; flex-direction: column; gap: 0.6rem;">
+              <label style="display: flex; align-items: center; gap: 0.6rem; font-size: 0.825rem; cursor: pointer;">
+                <input type="checkbox" id="prefNoiseSuppressionCheckbox" checked>
+                <span>Enable audio noise suppression &amp; echo cancellation</span>
+              </label>
+              <label style="display: flex; align-items: center; gap: 0.6rem; font-size: 0.825rem; cursor: pointer;">
+                <input type="checkbox" id="prefMeetingSoundsCheckbox" checked>
+                <span>Play audio chimes when participants join or disconnect</span>
+              </label>
+            </div>
+          </div>
+
+          <div style="margin-top: 1.25rem; padding: 0.75rem; background: var(--bg-surface-secondary); border: 1px solid var(--border-subtle); border-radius: var(--radius-sm); display: flex; align-items: center; justify-content: space-between;">
+            <div style="font-size: 0.775rem; color: var(--text-secondary);">Want to verify microphone volume or hear a test chime?</div>
+            <button type="button" class="btn btn-secondary btn-sm" id="jumpToAudioTestBtn">Test Audio &amp; Mic</button>
+          </div>
         </div>
 
-        <div class="form-field-group" style="margin-top: 1rem;">
-          <label class="form-label" for="settingPersonalRoomCode">Personal Meeting Room Code (Reusable)</label>
-          <div style="display: flex; gap: 0.5rem;">
-            <input type="text" id="settingPersonalRoomCode" class="select-input" placeholder="e.g. kpm-trvw-xzn" maxlength="32" style="font-family: var(--font-mono); letter-spacing: 0.5px;">
-            <button id="regeneratePersonalRoomCodeBtn" class="btn btn-secondary btn-sm" type="button" title="Generate fresh room code">Regenerate</button>
-            <button id="copyPersonalRoomLinkSettingsBtn" class="btn btn-secondary btn-sm" type="button" title="Copy permanent link">Copy Link</button>
-          </div>
-          <div style="font-size: 0.725rem; color: var(--text-muted); margin-top: 0.35rem;">
-            Both you and participants can join using this permanent reusable code or link at any time.
-          </div>
-        </div>
+        <!-- Tab 3: Video Settings -->
+        <div id="tab-video" class="settings-tab-pane" role="tabpanel">
+          <div style="font-weight: 700; font-size: 0.9rem; color: var(--text-main); margin-bottom: 0.5rem;">Video &amp; Camera Quality</div>
+          <div style="font-size: 0.75rem; color: var(--text-muted); margin-bottom: 1rem;">Select your camera source and adjust transmission resolution.</div>
 
-        <!-- Meeting Default Preferences -->
-        <div style="margin-top: 1.25rem;">
-          <div style="font-weight: 600; font-size: 0.85rem; margin-bottom: 0.6rem;">Call Join Defaults</div>
-          <div style="display: flex; flex-direction: column; gap: 0.6rem;">
-            <label style="display: flex; align-items: center; gap: 0.6rem; font-size: 0.825rem; cursor: pointer;">
-              <input type="checkbox" id="prefMuteAudioCheckbox">
-              <span>Always join meetings with microphone muted</span>
-            </label>
-            <label style="display: flex; align-items: center; gap: 0.6rem; font-size: 0.825rem; cursor: pointer;">
-              <input type="checkbox" id="prefMuteVideoCheckbox">
-              <span>Always join meetings with camera turned off</span>
-            </label>
-            <label style="display: flex; align-items: center; gap: 0.6rem; font-size: 0.825rem; cursor: pointer;">
-              <input type="checkbox" id="prefNoiseSuppressionCheckbox" checked>
-              <span>Enable audio noise suppression &amp; echo cancellation</span>
-            </label>
-            <label style="display: flex; align-items: center; gap: 0.6rem; font-size: 0.825rem; cursor: pointer;">
-              <input type="checkbox" id="prefMeetingSoundsCheckbox" checked>
-              <span>Play audio chimes when participants join or disconnect</span>
-            </label>
+          <!-- Camera Source -->
+          <div class="form-field-group">
+            <label class="form-label" for="settingVideoInputSource">Camera Input</label>
+            <div style="display: flex; gap: 0.5rem;">
+              <select id="settingVideoInputSource" class="select-input" style="flex: 1;">
+                <option value="">Default Camera</option>
+              </select>
+              <button id="settingFlipCameraBtn" class="btn btn-secondary btn-sm" type="button" style="white-space: nowrap;">Flip Camera</button>
+            </div>
+            <div style="font-size: 0.725rem; color: var(--text-muted); margin-top: 0.25rem;">Switch between front (selfie) and rear (environment) cameras or external webcams.</div>
           </div>
-        </div>
-
-        <!-- Section: Call Quality Settings -->
-        <div style="margin-top: 1.25rem; border-top: 1px solid var(--border-subtle); padding-top: 1rem;">
-          <div style="font-weight: 700; font-size: 0.9rem; color: var(--text-main); margin-bottom: 0.75rem;">Call quality settings</div>
 
           <!-- Camera Quality -->
-          <div class="form-field-group">
-            <label class="form-label" for="settingCameraQuality">Camera quality</label>
+          <div class="form-field-group" style="margin-top: 1rem;">
+            <label class="form-label" for="settingCameraQuality">Camera resolution</label>
             <select id="settingCameraQuality" class="select-input">
-              <option value="240p">Low — 240p</option>
-              <option value="360p">Economy — 360p</option>
-              <option value="480p">Standard — 480p</option>
-              <option value="720p" selected>HD — 720p</option>
-              <option value="1080p">Full HD — 1080p</option>
+              <option value="240p">Low - 240p</option>
+              <option value="360p">Economy - 360p</option>
+              <option value="480p">Standard - 480p</option>
+              <option value="720p" selected>HD - 720p</option>
+              <option value="1080p">Full HD - 1080p</option>
             </select>
           </div>
 
           <!-- Screen-Sharing Mode -->
-          <div class="form-field-group" style="margin-top: 0.85rem;">
+          <div class="form-field-group" style="margin-top: 1rem;">
             <label class="form-label" for="settingScreenShareMode">Screen-sharing mode</label>
             <select id="settingScreenShareMode" class="select-input">
-              <option value="sharpness" selected>Text &amp; code — prioritize sharpness</option>
-              <option value="balanced">Balanced — presentations</option>
-              <option value="motion">Smooth motion — demonstrations</option>
+              <option value="sharpness" selected>Text &amp; code - prioritize sharpness</option>
+              <option value="balanced">Balanced - presentations</option>
+              <option value="motion">Smooth motion - demonstrations</option>
             </select>
           </div>
 
           <!-- Dynamic Network Adaptation -->
-          <div style="display: flex; flex-direction: column; gap: 0.6rem; margin-top: 0.85rem;">
+          <div style="display: flex; flex-direction: column; gap: 0.6rem; margin-top: 1rem; border-top: 1px solid var(--border-subtle); padding-top: 1rem;">
+            <div style="font-weight: 600; font-size: 0.85rem;">Bandwidth Adaptation</div>
             <label style="display: flex; align-items: center; gap: 0.6rem; font-size: 0.825rem; cursor: pointer;">
               <input type="checkbox" id="settingAutoReduceQuality" checked>
               <span>Automatically reduce quality when the network is struggling</span>
@@ -1136,91 +1228,168 @@
               <span>Offer an audio-only fallback</span>
             </label>
           </div>
-        </div>
 
-        <!-- Section: Custom TURN / Relay Server (Optional) -->
-        <div style="margin-top: 1.25rem; border-top: 1px solid var(--border-subtle); padding-top: 1rem;">
-          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.4rem;">
-            <div style="font-weight: 700; font-size: 0.9rem; color: var(--text-main);">Custom TURN / Relay Server (Optional)</div>
-            <span style="font-size: 0.725rem; color: var(--accent-teal); font-weight: 600;">For Strict Firewalls / Symmetric NAT</span>
-          </div>
-          <div style="font-size: 0.75rem; color: var(--text-muted); margin-bottom: 0.75rem; line-height: 1.45;">
-            By default, Setu uses direct peer-to-peer WebRTC via public STUN. If you or your peer are behind strict corporate firewalls, mobile CGNAT, or Symmetric NATs where direct connections fail, specify your own TURN relay server. Credentials are saved only in your local browser.
-          </div>
-
-          <div class="form-field-group">
-            <label class="form-label" for="settingTurnServerUrl">TURN Server URL</label>
-            <input type="text" id="settingTurnServerUrl" class="select-input" placeholder="e.g. turn:turn.example.com:3478 or turns:turn.example.com:443?transport=tcp">
-          </div>
-
-          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; margin-top: 0.75rem;">
-            <div class="form-field-group">
-              <label class="form-label" for="settingTurnUsername">Username (optional)</label>
-              <input type="text" id="settingTurnUsername" class="select-input" placeholder="e.g. user123">
-            </div>
-            <div class="form-field-group">
-              <label class="form-label" for="settingTurnCredential">Credential / Password (optional)</label>
-              <input type="password" id="settingTurnCredential" class="select-input" placeholder="••••••••">
-            </div>
+          <div style="margin-top: 1.25rem; padding: 0.75rem; background: var(--bg-surface-secondary); border: 1px solid var(--border-subtle); border-radius: var(--radius-sm); display: flex; align-items: center; justify-content: space-between;">
+            <div style="font-size: 0.775rem; color: var(--text-secondary);">Check how your video looks with live resolution feedback:</div>
+            <button type="button" class="btn btn-secondary btn-sm" id="jumpToVideoTestBtn">Test Camera Preview</button>
           </div>
         </div>
 
-        <!-- Section: Custom API Signaling Gateway (Optional) -->
-        <div style="margin-top: 1.25rem; border-top: 1px solid var(--border-subtle); padding-top: 1rem;">
-          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.4rem;">
-            <div style="font-weight: 700; font-size: 0.9rem; color: var(--text-main);">Custom API Signaling Gateway (Optional)</div>
-            <span style="font-size: 0.725rem; color: var(--accent-teal); font-weight: 600;">Serverless / Self-Hosted</span>
-          </div>
-          <div style="font-size: 0.75rem; color: var(--text-muted); margin-bottom: 0.75rem; line-height: 1.45;">
-            Register meetings on your own single HTTPS API endpoint (e.g. Google Apps Script, Cloudflare Worker, FastAPI, Node.js, PHP). End-to-End Encrypted (AES-GCM-256) so your endpoint only stores opaque ciphertext. Your host secret key is strictly private and never included in invite links.
-          </div>
+        <!-- Tab 4: Interactive Device Test -->
+        <div id="tab-device-test" class="settings-tab-pane" role="tabpanel">
+          <div style="font-weight: 700; font-size: 0.9rem; color: var(--text-main); margin-bottom: 0.35rem;">Interactive Device Diagnostics</div>
+          <div style="font-size: 0.75rem; color: var(--text-muted); margin-bottom: 1rem;">Verify your camera video preview, microphone input level, voice loopback, and speaker audio output before or during meetings.</div>
 
-          <div style="margin-bottom: 0.85rem;">
-            <label style="display: flex; align-items: center; gap: 0.6rem; font-size: 0.825rem; font-weight: 600; cursor: pointer;">
-              <input type="checkbox" id="settingApiSignalingEnabled">
-              <span>Enable Custom API Signaling Gateway for new meetings</span>
-            </label>
-          </div>
-
-          <div id="apiSignalingOptionsGroup" style="display: flex; flex-direction: column; gap: 0.75rem;">
-            <div class="form-field-group">
-              <label class="form-label" for="settingApiEndpoint">API Endpoint URL</label>
-              <input type="url" id="settingApiEndpoint" class="select-input" placeholder="https://script.google.com/macros/s/.../exec or https://api.yourdomain.com/signaling" style="font-family: var(--font-mono); font-size: 0.8rem;">
-            </div>
-
-            <div class="form-field-group">
-              <label class="form-label" for="settingApiSecretKey">Host Secret Key (Optional / Private)</label>
-              <div style="display: flex; gap: 0.5rem;">
-                <input type="password" id="settingApiSecretKey" class="select-input" placeholder="Your private secret authorization key" style="font-family: var(--font-mono); font-size: 0.8rem;">
-                <button id="toggleApiSecretVisibilityBtn" class="btn btn-secondary btn-sm" type="button" title="Show/Hide secret key" style="white-space: nowrap;">Show</button>
+          <div class="device-test-grid">
+            <!-- Camera / Video Card -->
+            <div class="device-test-card">
+              <div class="device-test-title">
+                <span>Camera &amp; Video Preview</span>
+                <span id="testVideoSpecsBadge" class="badge badge-secondary" style="font-family: var(--font-mono); font-size: 0.7rem;">Ready</span>
               </div>
-              <div style="font-size: 0.725rem; color: var(--text-muted); margin-top: 0.35rem;">
-                Sent only from the host browser to authenticate meeting registration. Never included in participant invite links.
+              <div class="test-video-container">
+                <video id="testVideoPreview" autoplay playsinline muted></video>
+              </div>
+              <div class="form-field-group">
+                <label class="form-label" for="testCameraSelect" style="font-size: 0.75rem;">Test Camera Device</label>
+                <select id="testCameraSelect" class="select-input" style="font-size: 0.8rem; padding: 0.45rem 0.65rem;"></select>
+              </div>
+              <div style="display: flex; gap: 0.4rem;">
+                <button type="button" id="testToggleCameraBtn" class="btn btn-secondary btn-sm" style="flex: 1;">Pause Camera</button>
+                <button type="button" id="testFlipCameraBtn" class="btn btn-secondary btn-sm">Flip Camera</button>
               </div>
             </div>
 
-            <div class="form-field-group">
-              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.35rem;">
-                <label class="form-label" for="settingApiPollInterval" style="margin-bottom: 0;">Host Polling Interval</label>
-                <span id="settingApiPollIntervalVal" style="font-size: 0.75rem; font-weight: 600; color: var(--accent-blue);">3s</span>
+            <!-- Microphone & Speaker Card -->
+            <div class="device-test-card">
+              <!-- Mic Sub-section -->
+              <div class="device-test-title">
+                <span>Microphone &amp; Voice</span>
+                <span id="testMicVolumeText" style="font-family: var(--font-mono); font-size: 0.75rem; color: var(--accent-blue);">0%</span>
               </div>
-              <input type="range" id="settingApiPollInterval" min="1" max="60" step="1" value="3" style="width: 100%; accent-color: var(--accent-blue);">
-              <div style="display: flex; justify-content: space-between; font-size: 0.7rem; color: var(--text-muted); margin-top: 0.2rem;">
-                <span>1s (Faster)</span>
-                <span>5s (Balanced)</span>
-                <span>60s (Lightweight)</span>
+              <div class="form-field-group">
+                <label class="form-label" for="testMicSelect" style="font-size: 0.75rem;">Test Microphone Device</label>
+                <select id="testMicSelect" class="select-input" style="font-size: 0.8rem; padding: 0.45rem 0.65rem;"></select>
               </div>
-            </div>
+              <div>
+                <div style="font-size: 0.7rem; color: var(--text-muted); margin-bottom: 0.25rem;">Live Input Volume Meter</div>
+                <div class="test-mic-meter-box">
+                  <div id="testMicVolumeFill" class="test-mic-meter-fill"></div>
+                </div>
+              </div>
+              <div style="display: flex; flex-direction: column; gap: 0.35rem;">
+                <button type="button" id="testMicRecordBtn" class="btn btn-secondary btn-sm">Record Voice Test (4s)</button>
+                <div id="testMicRecordStatus" style="font-size: 0.725rem; color: var(--text-muted); min-height: 1.2rem;"></div>
+              </div>
 
-            <div style="display: flex; align-items: center; gap: 0.75rem; margin-top: 0.25rem;">
-              <button id="testApiEndpointBtn" class="btn btn-secondary btn-sm" type="button">Test API Connection</button>
-              <span id="apiEndpointTestStatus" style="font-size: 0.75rem; color: var(--text-muted);"></span>
+              <!-- Speaker Sub-section -->
+              <div style="border-top: 1px solid var(--border-subtle); padding-top: 0.75rem; margin-top: 0.25rem;">
+                <div class="device-test-title" style="margin-bottom: 0.4rem;">
+                  <span>Audio Output / Speaker</span>
+                </div>
+                <div class="form-field-group">
+                  <label class="form-label" for="testSpeakerSelect" style="font-size: 0.75rem;">Output Destination</label>
+                  <select id="testSpeakerSelect" class="select-input" style="font-size: 0.8rem; padding: 0.45rem 0.65rem;"></select>
+                </div>
+                <div style="display: flex; gap: 0.4rem; align-items: center; margin-top: 0.5rem;">
+                  <button type="button" id="testSpeakerPlayBtn" class="btn btn-secondary btn-sm">Play Test Sound</button>
+                  <button type="button" id="testSpeakerSysPickerBtn" class="btn btn-secondary btn-sm" style="display: none;">System Picker...</button>
+                </div>
+                <div id="testSpeakerStatus" style="font-size: 0.725rem; color: var(--text-muted); margin-top: 0.35rem; min-height: 1rem;"></div>
+              </div>
             </div>
           </div>
         </div>
 
-        <!-- Section: Remote Control & Companion -->
-        <div style="margin-top: 1.25rem; border-top: 1px solid var(--border-subtle); padding-top: 1rem;">
+        <!-- Tab 5: Network & Relays -->
+        <div id="tab-network" class="settings-tab-pane" role="tabpanel">
+          <div style="font-weight: 700; font-size: 0.9rem; color: var(--text-main); margin-bottom: 0.35rem;">Network Connectivity &amp; Relays</div>
+          <div style="font-size: 0.75rem; color: var(--text-muted); margin-bottom: 1rem;">Configure TURN servers for strict corporate firewalls and custom API signaling gateways.</div>
+
+          <!-- Section: Custom TURN / Relay Server -->
+          <div style="margin-bottom: 1.25rem;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.4rem;">
+              <div style="font-weight: 600; font-size: 0.85rem; color: var(--text-main);">Custom TURN / Relay Server (Optional)</div>
+              <span style="font-size: 0.725rem; color: var(--accent-teal); font-weight: 600;">For Strict Firewalls / Symmetric NAT</span>
+            </div>
+            <div style="font-size: 0.75rem; color: var(--text-muted); margin-bottom: 0.75rem; line-height: 1.45;">
+              By default, Setu uses direct peer-to-peer WebRTC via public STUN. If you or your peer are behind strict corporate firewalls, mobile CGNAT, or Symmetric NATs where direct connections fail, specify your own TURN relay server.
+            </div>
+
+            <div class="form-field-group">
+              <label class="form-label" for="settingTurnServerUrl">TURN Server URL</label>
+              <input type="text" id="settingTurnServerUrl" class="select-input" placeholder="e.g. turn:turn.example.com:3478 or turns:turn.example.com:443?transport=tcp">
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; margin-top: 0.75rem;">
+              <div class="form-field-group">
+                <label class="form-label" for="settingTurnUsername">Username (optional)</label>
+                <input type="text" id="settingTurnUsername" class="select-input" placeholder="e.g. user123">
+              </div>
+              <div class="form-field-group">
+                <label class="form-label" for="settingTurnCredential">Credential / Password (optional)</label>
+                <input type="password" id="settingTurnCredential" class="select-input" placeholder="••••••••">
+              </div>
+            </div>
+          </div>
+
+          <!-- Section: Custom API Signaling Gateway -->
+          <div style="border-top: 1px solid var(--border-subtle); padding-top: 1rem;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.4rem;">
+              <div style="font-weight: 600; font-size: 0.85rem; color: var(--text-main);">Custom API Signaling Gateway (Optional)</div>
+              <span style="font-size: 0.725rem; color: var(--accent-teal); font-weight: 600;">Serverless / Self-Hosted</span>
+            </div>
+            <div style="font-size: 0.75rem; color: var(--text-muted); margin-bottom: 0.75rem; line-height: 1.45;">
+              Register meetings on your own single HTTPS API endpoint (Google Apps Script, Cloudflare Worker, FastAPI, Node.js, PHP). End-to-End Encrypted (AES-GCM-256).
+            </div>
+
+            <div style="margin-bottom: 0.85rem;">
+              <label style="display: flex; align-items: center; gap: 0.6rem; font-size: 0.825rem; font-weight: 600; cursor: pointer;">
+                <input type="checkbox" id="settingApiSignalingEnabled">
+                <span>Enable Custom API Signaling Gateway for new meetings</span>
+              </label>
+            </div>
+
+            <div id="apiSignalingOptionsGroup" style="display: flex; flex-direction: column; gap: 0.75rem;">
+              <div class="form-field-group">
+                <label class="form-label" for="settingApiEndpoint">API Endpoint URL</label>
+                <input type="url" id="settingApiEndpoint" class="select-input" placeholder="https://script.google.com/macros/s/.../exec or https://api.yourdomain.com/signaling" style="font-family: var(--font-mono); font-size: 0.8rem;">
+              </div>
+
+              <div class="form-field-group">
+                <label class="form-label" for="settingApiSecretKey">Host Secret Key (Optional / Private)</label>
+                <div style="display: flex; gap: 0.5rem;">
+                  <input type="password" id="settingApiSecretKey" class="select-input" placeholder="Your private secret authorization key" style="font-family: var(--font-mono); font-size: 0.8rem;">
+                  <button id="toggleApiSecretVisibilityBtn" class="btn btn-secondary btn-sm" type="button" title="Show/Hide secret key" style="white-space: nowrap;">Show</button>
+                </div>
+                <div style="font-size: 0.725rem; color: var(--text-muted); margin-top: 0.35rem;">
+                  Sent only from the host browser to authenticate meeting registration. Never included in participant invite links.
+                </div>
+              </div>
+
+              <div class="form-field-group">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.35rem;">
+                  <label class="form-label" for="settingApiPollInterval" style="margin-bottom: 0;">Host Polling Interval</label>
+                  <span id="settingApiPollIntervalVal" style="font-size: 0.75rem; font-weight: 600; color: var(--accent-blue);">3s</span>
+                </div>
+                <input type="range" id="settingApiPollInterval" min="1" max="60" step="1" value="3" style="width: 100%; accent-color: var(--accent-blue);">
+                <div style="display: flex; justify-content: space-between; font-size: 0.7rem; color: var(--text-muted); margin-top: 0.2rem;">
+                  <span>1s (Faster)</span>
+                  <span>5s (Balanced)</span>
+                  <span>60s (Lightweight)</span>
+                </div>
+              </div>
+
+              <div style="display: flex; align-items: center; gap: 0.75rem; margin-top: 0.25rem;">
+                <button id="testApiEndpointBtn" class="btn btn-secondary btn-sm" type="button">Test API Connection</button>
+                <span id="apiEndpointTestStatus" style="font-size: 0.75rem; color: var(--text-muted);"></span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tab 6: Remote Control & Companion -->
+        <div id="tab-remote" class="settings-tab-pane" role="tabpanel">
           <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.4rem;">
             <div style="font-weight: 700; font-size: 0.9rem; color: var(--text-main);">Remote Control &amp; Companion</div>
             <span style="font-size: 0.725rem; color: var(--accent-teal); font-weight: 600;">Native Input Bridge</span>
@@ -1256,10 +1425,11 @@
           </div>
         </div>
 
-        <div style="margin-top: 1.5rem; display: flex; justify-content: flex-end; gap: 0.5rem;">
-          <button id="saveSettingsBtn" class="btn btn-primary">Save Settings</button>
-        </div>
+      </div>
 
+      <div class="dialog-footer" style="padding: 0.85rem 1.25rem; border-top: 1px solid var(--border-subtle); display: flex; justify-content: flex-end; gap: 0.5rem; flex-shrink: 0; background: var(--bg-surface-elevated);">
+        <button id="cancelSettingsBtn" class="btn btn-secondary" type="button">Cancel</button>
+        <button id="saveSettingsBtn" class="btn btn-primary" type="button">Save Settings</button>
       </div>
     </div>
   </div>
@@ -1377,6 +1547,7 @@
   <script src="assets/js/connection-ui.js"></script>
   <script src="assets/js/meeting.js"></script>
   <script src="assets/js/remote-control.js"></script>
+  <script src="assets/js/device-test.js"></script>
   <script src="assets/js/app.js"></script>
 </body>
 </html>

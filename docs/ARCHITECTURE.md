@@ -106,3 +106,17 @@ Because there is no signaling server, Setu uses **Manual Non-Trickle ICE Exchang
 - **Local Presenter Card Isolation:** When a participant shares their screen, Setu routes local presentation feedback to a dedicated `#localPresenterCard` container rather than overwriting main remote video elements. This eliminates local video flickering and preserves full visual visibility of remote participants.
 - **Hardware Camera Release:** Disabling video explicitly stops underlying media stream tracks so camera hardware indicators and LED lights turn completely off.
 
+### 2.13 Mobile Display Wake Lock & Audio Output Routing (`assets/js/meeting.js` & `assets/js/webrtc.js`)
+- **Display Wake Lock:** Mobile platforms enforce aggressive 30 to 60-second display timeout policies. Setu activates the Screen Wake Lock API (`navigator.wakeLock.request('screen')`) upon meeting entry to keep displays awake indefinitely during active conferences, automatically re-requesting the lock when the browser regains visibility via the `visibilitychange` event.
+- **Audio Output Transducer Switching:**
+  - Android & Chromium: Supports dynamic sink switching using `HTMLMediaElement.prototype.setSinkId` and the native system output dialog (`navigator.mediaDevices.selectAudioOutput()`), enabling users to toggle between Loudspeaker, Earpiece, and paired Bluetooth headsets during active calls.
+  - iOS WebKit / Safari: WebKit enforces strict anti-fingerprinting restrictions preventing programmatic `setSinkId`. Voice routing on iOS is managed cooperatively with hardware proximity sensors (holding the device to the ear switches from speakerphone to earpiece).
+- **Mobile Split Controls & Camera Flipping:** Mobile meeting toolbars feature touch-accessible split controls for microphone and camera, 1-tap camera flipping (`flipCamera()` cycling front/back sensors via `facingMode`), and centered bottom popups.
+
+### 2.14 Interactive Hardware Diagnostics Suite (`assets/js/device-test.js`)
+- **Modular Tabbed Settings Architecture:** Replaces monolithic vertical dialogs with a high-performance tabbed navigation bar (`General`, `Audio`, `Video`, `Device Test`, `Network`, `Remote Control`).
+- **Live Video Diagnostic Preview:** Renders camera streams directly with real-time metadata extraction, measuring actual rendering dimensions, framerate, and aspect ratio.
+- **Microphone Signal Analyzer & 4-Second Voice Loopback:** Uses an `AnalyserNode` for real-time frequency-based input level metering and a 4-second `MediaRecorder` speech buffer that plays back through the chosen speaker/earpiece sink to verify audio capture fidelity.
+- **Speaker Diagnostic Synthesizer:** Generates harmonic chime tones routed to the designated output sink for audible verification.
+- **Strict Hardware Lifecycle Management:** All test streams and audio contexts are automatically torn down whenever the dialog is closed or tabs are changed, ensuring zero background camera/mic resource locking.
+

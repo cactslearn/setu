@@ -142,6 +142,15 @@ class ConnectionWizardUI {
       soundTestBtn.addEventListener('click', () => this.playTestChime());
     }
 
+    const prejoinDeviceTestBtn = document.getElementById('prejoinDeviceTestBtn');
+    if (prejoinDeviceTestBtn) {
+      prejoinDeviceTestBtn.addEventListener('click', () => {
+        if (window.openSettingsModal) {
+          window.openSettingsModal('device-test');
+        }
+      });
+    }
+
     // Device Pickers in Preview
     const audioSelect = document.getElementById('audioSourceSelect');
     if (audioSelect) {

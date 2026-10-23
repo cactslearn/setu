@@ -268,9 +268,64 @@ class WebRTCManager {
       } else {
         this.cameraTrackBeforeShare = newTrack;
       }
+      const localVideo = document.getElementById('localVideo');
+      if (localVideo) localVideo.srcObject = this.localStream;
       return true;
     } catch (e) {
       console.error('Failed to switch video input device:', e);
+      return false;
+    }
+  }
+
+  /**
+   * Flips between available cameras (front user-facing vs back environment-facing on mobile, or next webcam).
+   */
+  async flipCamera() {
+    try {
+      const devices = await navigator.mediaDevices.enumerateDevices();
+      const videoDevices = devices.filter(d => d.kind === 'videoinput');
+
+      if (videoDevices.length > 1) {
+        const curIdx = videoDevices.findIndex(d => d.deviceId === this.selectedVideoDeviceId);
+        const nextIdx = (curIdx + 1) % videoDevices.length;
+        const target = videoDevices[nextIdx];
+        const ok = await this.switchVideoDevice(target.deviceId);
+        const localVideo = document.getElementById('localVideo');
+        if (localVideo) localVideo.srcObject = this.localStream;
+        return ok;
+      }
+
+      // If only 1 virtual/composite video device ID is exposed by mobile browser, toggle facingMode
+      this.currentFacingMode = (this.currentFacingMode === 'environment') ? 'user' : 'environment';
+      const newStream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: { exact: this.currentFacingMode }, width: { ideal: 1280 }, height: { ideal: 720 } }
+      }).catch(() => navigator.mediaDevices.getUserMedia({
+        video: { facingMode: this.currentFacingMode, width: { ideal: 1280 }, height: { ideal: 720 } }
+      }));
+
+      if (newStream) {
+        const newTrack = newStream.getVideoTracks()[0];
+        if (this.localStream) {
+          const oldTrack = this.localStream.getVideoTracks()[0];
+          if (oldTrack) {
+            this.localStream.removeTrack(oldTrack);
+            oldTrack.stop();
+          }
+          this.localStream.addTrack(newTrack);
+        }
+        if (this.pc && !this.screenStream) {
+          const sender = this.pc.getSenders().find(s => s.track && s.track.kind === 'video');
+          if (sender) await sender.replaceTrack(newTrack);
+        } else {
+          this.cameraTrackBeforeShare = newTrack;
+        }
+        const localVideo = document.getElementById('localVideo');
+        if (localVideo) localVideo.srcObject = this.localStream;
+        return true;
+      }
+      return false;
+    } catch (err) {
+      console.warn('[WebRTC] flipCamera error:', err);
       return false;
     }
   }
@@ -301,6 +356,26 @@ class WebRTCManager {
       }
     }
     return false;
+  }
+
+  /**
+   * Triggers native system audio output dialog if supported (Android / Chrome 110+).
+   */
+  async selectAudioOutputDialog() {
+    if (typeof navigator.mediaDevices?.selectAudioOutput === 'function') {
+      try {
+        const chosen = await navigator.mediaDevices.selectAudioOutput();
+        if (chosen && chosen.deviceId) {
+          await this.switchAudioOutput(chosen.deviceId);
+          return chosen;
+        }
+      } catch (err) {
+        if (err.name !== 'NotAllowedError' && err.name !== 'AbortError') {
+          console.warn('[WebRTC] selectAudioOutput note:', err);
+        }
+      }
+    }
+    return null;
   }
 
   /**

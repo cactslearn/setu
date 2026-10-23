@@ -847,14 +847,151 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   });
 
-  const openSettings = () => {
+  const cancelSettingsBtn = document.getElementById('cancelSettingsBtn');
+  const jumpToAudioTestBtn = document.getElementById('jumpToAudioTestBtn');
+  const jumpToVideoTestBtn = document.getElementById('jumpToVideoTestBtn');
+
+  // Settings Tabs Management
+  const tabBtns = document.querySelectorAll('.settings-tab-btn');
+  const tabPanes = document.querySelectorAll('.settings-tab-pane');
+
+  function switchSettingsTab(tabName) {
+    tabBtns.forEach(btn => {
+      const isActive = btn.dataset.tab === tabName;
+      btn.classList.toggle('active', isActive);
+      btn.setAttribute('aria-selected', isActive ? 'true' : 'false');
+    });
+    tabPanes.forEach(pane => {
+      const isActive = pane.id === `tab-${tabName}`;
+      pane.classList.toggle('active', isActive);
+      pane.style.display = isActive ? 'block' : 'none';
+    });
+
+    if (tabName === 'device-test' && window.setuDeviceTest) {
+      window.setuDeviceTest.initTestUI();
+    } else if (window.setuDeviceTest) {
+      window.setuDeviceTest.stopAllTests();
+    }
+  }
+
+  tabBtns.forEach(btn => {
+    btn.addEventListener('click', () => switchSettingsTab(btn.dataset.tab));
+  });
+
+  jumpToAudioTestBtn?.addEventListener('click', () => switchSettingsTab('device-test'));
+  jumpToVideoTestBtn?.addEventListener('click', () => switchSettingsTab('device-test'));
+
+  async function populateSettingsDeviceDropdowns() {
+    try {
+      const devices = await navigator.mediaDevices.enumerateDevices();
+      const micSelect = document.getElementById('settingAudioInputSource');
+      const speakerSelect = document.getElementById('settingAudioOutputSink');
+      const camSelect = document.getElementById('settingVideoInputSource');
+      const sysPickerBtn = document.getElementById('settingAudioOutputPickerBtn');
+
+      if (micSelect) micSelect.innerHTML = '<option value="">Default Microphone</option>';
+      if (speakerSelect) speakerSelect.innerHTML = '<option value="default">Speaker / Default</option>';
+      if (camSelect) camSelect.innerHTML = '<option value="">Default Camera</option>';
+
+      let micIdx = 1, spkIdx = 1, camIdx = 1;
+
+      devices.forEach(d => {
+        const opt = document.createElement('option');
+        opt.value = d.deviceId;
+
+        if (d.kind === 'audioinput' && micSelect) {
+          opt.textContent = d.label || `Microphone ${micIdx++}`;
+          if (d.deviceId === window.setuWebRTC?.selectedAudioDeviceId) opt.selected = true;
+          micSelect.appendChild(opt);
+        } else if (d.kind === 'audiooutput' && speakerSelect) {
+          let label = d.label;
+          if (!label || !label.trim()) {
+            label = d.deviceId === 'default' ? 'Speaker / Default' : `Speaker ${spkIdx++}`;
+          }
+          opt.textContent = label;
+          if (d.deviceId === (window.setuWebRTC?.selectedAudioOutputId || 'default')) opt.selected = true;
+          speakerSelect.appendChild(opt);
+        } else if (d.kind === 'videoinput' && camSelect) {
+          opt.textContent = d.label || `Camera ${camIdx++}`;
+          if (d.deviceId === window.setuWebRTC?.selectedVideoDeviceId) opt.selected = true;
+          camSelect.appendChild(opt);
+        }
+      });
+
+      if (sysPickerBtn) {
+        sysPickerBtn.style.display = (typeof navigator.mediaDevices?.selectAudioOutput === 'function') ? 'inline-block' : 'none';
+      }
+    } catch (e) {
+      console.warn('[Settings] Error enumerating devices:', e);
+    }
+  }
+
+  // Device change handlers in settings
+  document.getElementById('settingAudioInputSource')?.addEventListener('change', async (e) => {
+    if (window.setuWebRTC && e.target.value) {
+      await window.setuWebRTC.switchAudioDevice(e.target.value);
+      if (window.showToast) window.showToast('Microphone switched');
+    }
+  });
+
+  document.getElementById('settingAudioOutputSink')?.addEventListener('change', async (e) => {
+    if (window.setuWebRTC && e.target.value) {
+      const ok = await window.setuWebRTC.switchAudioOutput(e.target.value);
+      if (window.showToast) {
+        const text = e.target.options[e.target.selectedIndex]?.text || 'device';
+        window.showToast(ok ? `Audio output: ${text}` : 'Audio output switched');
+      }
+    }
+  });
+
+  document.getElementById('settingAudioOutputPickerBtn')?.addEventListener('click', async () => {
+    if (window.setuWebRTC) {
+      const chosen = await window.setuWebRTC.selectAudioOutputDialog();
+      if (chosen) {
+        await populateSettingsDeviceDropdowns();
+        if (window.showToast) window.showToast('Audio output: ' + (chosen.label || 'Selected device'));
+      }
+    }
+  });
+
+  document.getElementById('settingVideoInputSource')?.addEventListener('change', async (e) => {
+    if (window.setuWebRTC && e.target.value) {
+      await window.setuWebRTC.switchVideoDevice(e.target.value);
+      if (window.showToast) window.showToast('Camera switched');
+    }
+  });
+
+  document.getElementById('settingFlipCameraBtn')?.addEventListener('click', async () => {
+    if (window.setuWebRTC) {
+      const ok = await window.setuWebRTC.flipCamera();
+      await populateSettingsDeviceDropdowns();
+      if (window.showToast) window.showToast(ok ? 'Camera switched' : 'Could not switch camera');
+    }
+  });
+
+  const openSettings = (preferredTab = 'general') => {
     loadUserProfile();
+    populateSettingsDeviceDropdowns();
+    switchSettingsTab(preferredTab);
     if (settingsModal) settingsModal.classList.add('open');
   };
 
-  openSettingsBtn?.addEventListener('click', openSettings);
-  welcomeSettingsBtn?.addEventListener('click', openSettings);
-  closeSettingsModalBtn?.addEventListener('click', () => settingsModal?.classList.remove('open'));
+  window.openSettingsModal = openSettings;
+
+  const closeSettings = () => {
+    if (window.setuDeviceTest) {
+      window.setuDeviceTest.stopAllTests();
+    }
+    settingsModal?.classList.remove('open');
+  };
+
+  openSettingsBtn?.addEventListener('click', () => openSettings('general'));
+  welcomeSettingsBtn?.addEventListener('click', () => openSettings('general'));
+  closeSettingsModalBtn?.addEventListener('click', closeSettings);
+  cancelSettingsBtn?.addEventListener('click', closeSettings);
+  settingsModal?.addEventListener('click', (e) => {
+    if (e.target === settingsModal) closeSettings();
+  });
 
   if (uploadAvatarBtn && avatarFileInput) {
     uploadAvatarBtn.addEventListener('click', () => avatarFileInput.click());
@@ -984,7 +1121,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       }
 
       broadcastUserProfile();
-      settingsModal?.classList.remove('open');
+      closeSettings();
       window.showToast('Profile, personal room, and gateway settings saved');
     });
   }
@@ -1374,7 +1511,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     } else if (e.key === 'Escape') {
       window.setuWizard.closeWizard();
       if (privacyModal) privacyModal.classList.remove('open');
-      if (settingsModal) settingsModal.classList.remove('open');
+      closeSettings();
       if (historyModal) historyModal.classList.remove('open');
       if (permanentQrModal) permanentQrModal.classList.remove('open');
     }

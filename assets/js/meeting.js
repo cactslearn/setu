@@ -537,9 +537,12 @@ class MeetingController {
       }
     } catch (e) {}
 
-    // 5. Clear presentation stage
+    // 5. Clear presentation stage and remote control flags
     try {
       this.clearPresentationStage();
+      if (window.setuRemoteControl && typeof window.setuRemoteControl.reset === 'function') {
+        window.setuRemoteControl.reset();
+      }
     } catch (e) {}
 
     // 6. Detach media from all meeting video elements
@@ -682,6 +685,16 @@ class MeetingController {
     this.isPresentationActive = false;
     this.isLocalPresenting = false;
     this._meetingArchived = false;
+
+    const banner = document.getElementById('presentationBanner');
+    if (banner) banner.classList.remove('active');
+
+    const screenBtn = document.getElementById('screenShareBtn');
+    if (screenBtn) screenBtn.classList.remove('active');
+
+    if (window.setuRemoteControl && typeof window.setuRemoteControl.reset === 'function') {
+      window.setuRemoteControl.reset();
+    }
 
     // Reset meeting notes
     const notesEl = document.getElementById('meetingNotesText');
@@ -938,7 +951,7 @@ class MeetingController {
     window.setuWebRTC.onScreenShareStarted = (screenStream) => {
       this.isPresentationActive = true;
       this.isLocalPresenting = true;
-      this.renderPresentationStage(screenStream, 'You are presenting to everyone');
+      this.renderPresentationStage(screenStream, '');
 
       const banner = document.getElementById('presentationBanner');
       if (banner) banner.classList.add('active');
@@ -1102,6 +1115,14 @@ class MeetingController {
     const presVideo = document.getElementById('presentationVideo');
     const presTitle = document.getElementById('presentationTitleText');
     const localCard = document.getElementById('localPresenterCard');
+    const pip = document.getElementById('localVideoContainer');
+
+    if (pip) {
+      pip.style.left = '';
+      pip.style.top = '';
+      pip.style.right = '';
+      pip.style.bottom = '';
+    }
 
     if (stage) stage.classList.add('in-presentation-mode');
     if (presBox) presBox.style.display = 'flex';
@@ -1145,6 +1166,19 @@ class MeetingController {
   }
 
   clearPresentationStage() {
+    this.isPresentationActive = false;
+    this.isLocalPresenting = false;
+
+    const banner = document.getElementById('presentationBanner');
+    if (banner) banner.classList.remove('active');
+
+    const screenBtn = document.getElementById('screenShareBtn');
+    if (screenBtn) screenBtn.classList.remove('active');
+
+    if (window.setuRemoteControl && typeof window.setuRemoteControl.onPresentationStateChanged === 'function') {
+      window.setuRemoteControl.onPresentationStateChanged(false, false);
+    }
+
     const stage = document.getElementById('videoStage');
     const presBox = document.getElementById('mainPresentationBox');
     const presVideo = document.getElementById('presentationVideo');
@@ -1166,6 +1200,14 @@ class MeetingController {
     if (presVideo) {
       presVideo.style.display = 'block';
       presVideo.srcObject = null;
+    }
+
+    const pip = document.getElementById('localVideoContainer');
+    if (pip) {
+      pip.style.left = '';
+      pip.style.top = '';
+      pip.style.right = '';
+      pip.style.bottom = '';
     }
 
     this.syncParticipantTiles();

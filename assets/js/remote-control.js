@@ -401,13 +401,13 @@ class RemoteControlModule {
 
       this.ws.onclose = () => {
         console.log('[RemoteControl] Companion WebSocket closed.');
-        if (this.allowRemoteControl && !this.pollTimer) {
+        if (this.allowRemoteControl && this.isLocalSharing && !this.pollTimer) {
           this.startCompanionPolling();
         }
       };
     } catch (err) {
       console.warn('[RemoteControl] Failed to create WebSocket:', err);
-      if (this.allowRemoteControl) {
+      if (this.allowRemoteControl && this.isLocalSharing) {
         this.startCompanionPolling();
       }
     }
@@ -415,6 +415,8 @@ class RemoteControlModule {
 
   startCompanionPolling() {
     if (this.pollTimer) return;
+    if (!this.allowRemoteControl || !this.isLocalSharing) return;
+
     const badge = document.getElementById('companionActiveStatusBadge');
     if (badge) {
       badge.textContent = 'Waiting for app...';
@@ -422,7 +424,7 @@ class RemoteControlModule {
     }
 
     this.pollTimer = setInterval(async () => {
-      if (!this.allowRemoteControl) {
+      if (!this.allowRemoteControl || !this.isLocalSharing) {
         clearInterval(this.pollTimer);
         this.pollTimer = null;
         return;
@@ -443,7 +445,11 @@ class RemoteControlModule {
       this.pollTimer = null;
     }
     if (this.ws) {
-      try { this.ws.close(); } catch (_) {}
+      try {
+        this.ws.onclose = null;
+        this.ws.onerror = null;
+        this.ws.close();
+      } catch (_) {}
       this.ws = null;
     }
     const badge = document.getElementById('companionActiveStatusBadge');
@@ -794,6 +800,33 @@ class RemoteControlModule {
       if (reqBtn) reqBtn.style.display = 'none';
       this.stopViewerControl();
       this.stopHostCompanionBridge();
+    }
+  }
+
+  reset() {
+    this.allowRemoteControl = false;
+    this.isLocalSharing = false;
+    this.isRemoteSharing = false;
+    this.isViewerActive = false;
+
+    this.stopHostCompanionBridge();
+    this.stopViewerControl();
+
+    const allowCheckbox = document.getElementById('allowRemoteControlCheckbox');
+    if (allowCheckbox) allowCheckbox.checked = false;
+
+    const hostBar = document.getElementById('hostRemoteControlBar');
+    if (hostBar) hostBar.style.display = 'none';
+
+    const reqBtn = document.getElementById('requestRemoteControlBtn');
+    if (reqBtn) reqBtn.style.display = 'none';
+
+    if (window.setuStorage && window.setuStorage.saveRemoteControlSettings) {
+      window.setuStorage.saveRemoteControlSettings({
+        companionPort: this.companionPort,
+        companionPasskey: this.companionPasskey,
+        allowRemoteControl: false
+      }).catch(() => {});
     }
   }
 }

@@ -613,7 +613,7 @@ body {
   padding: 0 1rem;
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-end;
   font-size: 0.8rem;
   font-weight: 600;
   color: var(--text-main);
@@ -624,6 +624,7 @@ body {
   display: flex;
   align-items: center;
   gap: 0.4rem;
+  margin-left: auto;
 }
 
 .pres-action-btn {
@@ -748,7 +749,7 @@ body {
 .remote-video-el {
   width: 100%;
   height: 100%;
-  object-fit: cover;
+  object-fit: contain !important;
   background: #1e1e1e;
 }
 
@@ -2015,6 +2016,11 @@ body {
 
   .video-canvas-stage.in-presentation-mode .pip-video-box {
     position: relative !important;
+    top: auto !important;
+    bottom: auto !important;
+    left: auto !important;
+    right: auto !important;
+    inset: auto !important;
     overflow: hidden !important;
     width: 125px !important;
     height: 100% !important;
@@ -2024,6 +2030,40 @@ body {
     border-radius: var(--radius-sm) !important;
     box-shadow: none !important;
     transform: none !important;
+  }
+
+  .video-canvas-stage.in-presentation-mode .pip-cam-off {
+    width: 100% !important;
+    height: 100% !important;
+    align-items: center !important;
+    justify-content: center !important;
+    flex-direction: column !important;
+    background: #202124 !important;
+  }
+
+  #localPresenterCard {
+    padding: 0.75rem 0.5rem !important;
+    gap: 0.4rem !important;
+  }
+
+  #localPresenterCard > div:first-child {
+    width: 42px !important;
+    height: 42px !important;
+  }
+
+  #localPresenterCard > div:first-child svg {
+    width: 20px !important;
+    height: 20px !important;
+  }
+
+  #localPresenterCard h3 {
+    font-size: 0.95rem !important;
+    margin-bottom: 0.2rem !important;
+  }
+
+  #localPresenterCard p {
+    font-size: 0.75rem !important;
+    line-height: 1.25 !important;
   }
 
   .toast-container {

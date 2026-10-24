@@ -313,11 +313,32 @@ class ConnectionWizardUI {
 
       const qrCanvas = document.getElementById('qrCodeCanvas');
       if (qrCanvas && window.setuQR) {
-        window.setuQR.renderQR(qrCanvas, this.generatedPayload);
+        const link = window.location.origin + window.location.pathname + '#join=' + encodeURIComponent(this.generatedPayload);
+        window.setuQR.renderQR(qrCanvas, link, { size: 240 });
       }
     } catch (err) {
       console.error('Host offer generation error:', err);
       codeArea.value = 'WebRTC Initialization Error: ' + err.message;
+    }
+  }
+
+  toggleQRDisplay() {
+    const qrContainer = document.getElementById('qrCodeContainer');
+    const qrCanvas = document.getElementById('qrCodeCanvas');
+    const toggleBtn = document.getElementById('toggleQrBtn');
+    if (!qrContainer) return;
+
+    const isOpening = qrContainer.style.display === 'none' || !qrContainer.style.display;
+    qrContainer.style.display = isOpening ? 'flex' : 'none';
+    if (toggleBtn) {
+      toggleBtn.textContent = isOpening ? 'Hide QR' : 'QR Code';
+    }
+
+    if (isOpening && qrCanvas && window.setuQR) {
+      const link = this.generatedPayload
+        ? `${window.location.origin}${window.location.pathname}#join=${encodeURIComponent(this.generatedPayload)}`
+        : '';
+      window.setuQR.renderQR(qrCanvas, link || this.generatedPayload || 'SETU-MEETING', { size: 240 });
     }
   }
 

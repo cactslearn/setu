@@ -645,6 +645,23 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   loadRememberedContacts();
 
+  // Responsive Comparison Table Filter
+  const compFilterBar = document.getElementById('compFilterBar');
+  const compTable = document.getElementById('compTable');
+  if (compFilterBar && compTable) {
+    compFilterBar.addEventListener('click', (e) => {
+      const btn = e.target.closest('.comp-filter-btn');
+      if (!btn) return;
+      compFilterBar.querySelectorAll('.comp-filter-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      const target = btn.dataset.col;
+      compTable.className = 'comp-table';
+      if (target && target !== 'all') {
+        compTable.classList.add('filter-active', `filter-${target}`);
+      }
+    });
+  }
+
   // 15. Privacy Console Modal
   const privacyBtn = document.getElementById('privacyCenterBtn');
   const privacyModal = document.getElementById('privacyModal');

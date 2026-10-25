@@ -2,10 +2,10 @@
 <html lang="en" data-theme="dark">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>Setu P2P — Secure Serverless Video Meetings &amp; Remote Control</title>
-  <meta name="description" content="Open-source, strictly serverless, zero-backend WebRTC video calls, encrypted peer chat, chunked file transfers, and remote desktop control directly inside your browser.">
-  <meta name="keywords" content="WebRTC, P2P, Serverless, Video Call, Secure Chat, File Transfer, Remote Desktop Control, Open Source, GitHub Pages">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Setu P2P — Open-Source Video Meetings, Collaboration &amp; Remote Assistance</title>
+  <meta name="description" content="Meet. Share. Collaborate. Take control. Setu P2P is an open-source, WebRTC-based video conferencing, collaboration, and remote assistance platform with local-first privacy and flexible hosting.">
+  <meta name="keywords" content="WebRTC, P2P, Serverless, Video Call, Remote Assistance, Screen Sharing, Secure Chat, File Transfer, Open Source, GitHub Pages, Self Hosted">
   <meta name="author" content="Setu P2P Project">
   <meta name="theme-color" content="#0b0f17">
   <link rel="canonical" href="./">
@@ -13,20 +13,26 @@
   <!-- OpenGraph Metadata for Social & Search Sharing -->
   <meta property="og:type" content="website">
   <meta property="og:site_name" content="Setu P2P">
-  <meta property="og:title" content="Setu P2P — Secure Serverless Video Meetings &amp; Remote Control">
-  <meta property="og:description" content="Open-source, strictly serverless, zero-backend WebRTC video calls, encrypted peer chat, chunked file transfers, and remote desktop control directly inside your browser.">
+  <meta property="og:title" content="Setu P2P — Open-Source Video Meetings, Collaboration &amp; Remote Assistance">
+  <meta property="og:description" content="Meet. Share. Collaborate. Take control. Setu P2P is an open-source, WebRTC-based video conferencing, collaboration, and remote assistance platform with local-first privacy and flexible hosting.">
   <meta property="og:url" content="./">
   <meta property="og:image" content="assets/img/og-preview.png">
 
   <!-- Twitter / X Card Metadata -->
   <meta name="twitter:card" content="summary_large_image">
-  <meta name="twitter:title" content="Setu P2P — Secure Serverless Video Meetings &amp; Remote Control">
-  <meta name="twitter:description" content="Open-source, strictly serverless, zero-backend WebRTC video calls, encrypted peer chat, chunked file transfers, and remote desktop control directly inside your browser.">
+  <meta name="twitter:title" content="Setu P2P — Open-Source Video Meetings, Collaboration &amp; Remote Assistance">
+  <meta name="twitter:description" content="Meet. Share. Collaborate. Take control. Setu P2P is an open-source, WebRTC-based video conferencing, collaboration, and remote assistance platform with local-first privacy and flexible hosting.">
   <meta name="twitter:image" content="assets/img/og-preview.png">
 
-  <!-- Font Preconnect for Core Web Vitals Optimization -->
+  <!-- Font Preconnect & Asynchronous Non-Blocking Web Fonts for Core Web Vitals (FCP/LCP) -->
+  <link rel="dns-prefetch" href="https://fonts.googleapis.com">
+  <link rel="dns-prefetch" href="https://fonts.gstatic.com">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=optional" media="print" onload="this.media='all'">
+  <noscript>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=optional">
+  </noscript>
 
   <!-- Structured Data (JSON-LD) for SEO, AEO & AI Search Knowledge Graphs -->
   <script type="application/ld+json">
@@ -37,7 +43,7 @@
         "@type": "SoftwareApplication",
         "@id": "#software",
         "name": "Setu P2P",
-        "description": "Open-source, strictly serverless, zero-backend WebRTC video calls, encrypted peer chat, chunked file transfers, and remote desktop control directly inside your browser.",
+        "description": "Meet. Share. Collaborate. Take control. Setu P2P is an open-source, WebRTC-based video conferencing, collaboration, and remote assistance platform with local-first privacy and flexible hosting.",
         "applicationCategory": "CommunicationApplication",
         "operatingSystem": "Web Browser, Windows, macOS, Linux",
         "offers": {
@@ -141,6 +147,7 @@
   </script>
 
   <!-- CSS Stylesheet -->
+  <link rel="preload" href="assets/css/app.css" as="style">
   <link rel="stylesheet" href="assets/css/app.css">
 </head>
 <body>
@@ -217,11 +224,10 @@
     <section id="welcomeSection" class="view-panel active" aria-labelledby="welcomeHeading">
       <div class="welcome-container">
         <h1 id="welcomeHeading" class="welcome-title">
-          Private, direct video meetings &amp; remote control.<br>
-          No accounts, no central servers.
+          Meet. Share. Collaborate. Take control.
         </h1>
         <p class="welcome-subtitle">
-          End-to-end encrypted video, screen sharing, remote desktop control, file transfer, and collaborative whiteboards directly between browsers.
+          Video conferencing, screen sharing, remote assistance, and collaboration in one open-source platform—with flexible hosting, local-first data, and no mandatory subscription.
         </p>
 
         <!-- Action Cards: Host or Join -->
@@ -286,6 +292,376 @@
           </div>
           <div id="contactsChipsList" style="display: flex; flex-wrap: wrap; gap: 0.45rem;"></div>
         </div>
+
+        <!-- Fast-Jump Navigation Pills -->
+        <nav class="welcome-nav-pills" aria-label="Page Sections Navigation">
+          <a href="#welcomeHeading" class="nav-pill-btn">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>
+            <span>Try Setu</span>
+          </a>
+          <a href="#featuresSection" class="nav-pill-btn">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
+            <span>Discover Features</span>
+          </a>
+          <a href="#howItWorksSection" class="nav-pill-btn">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 14 14"></polyline></svg>
+            <span>How It Works</span>
+          </a>
+          <a href="#freedomSection" class="nav-pill-btn">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
+            <span>Software Freedom</span>
+          </a>
+          <a href="#comparisonSection" class="nav-pill-btn">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg>
+            <span>Compare Platforms</span>
+          </a>
+          <a href="https://github.com/cactslearn/setu" target="_blank" rel="noopener noreferrer" class="nav-pill-btn">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="16 18 22 12 16 6"></polyline><polyline points="8 6 2 12 8 18"></polyline></svg>
+            <span>Explore Source Code</span>
+          </a>
+        </nav>
+
+        <!-- Central Positioning Statement Card -->
+        <article class="positioning-banner-card" aria-label="Product Positioning Statement">
+          <span class="pos-badge">Open-Source WebRTC Platform</span>
+          <blockquote class="pos-quote">
+            &ldquo;Setu brings video conferencing, screen sharing, remote assistance, and collaboration together in an open-source platform designed around software freedom and deployment flexibility.&rdquo;
+          </blockquote>
+          <p class="pos-subtext">
+            Mainstream conferencing tools lock organizations into closed cloud silos, recurring seat licenses, and opaque data pipelines. Lightweight open-source tools frequently stop at video or text chat. Setu bridges the gap by combining end-to-end encrypted 1-to-1 WebRTC calling, low-latency screen sharing, collaborative whiteboarding, chunked file transfer, and host-consented remote desktop control into a single, zero-install web client.
+          </p>
+        </article>
+
+        <!-- Feature Showcase Section -->
+        <section id="featuresSection" class="marketing-section" aria-labelledby="featuresHeading">
+          <header class="marketing-section-header">
+            <h2 id="featuresHeading" class="marketing-section-title">Core Capabilities &amp; Features</h2>
+            <p class="marketing-section-desc">
+              Every tool required for direct communication and hands-on remote collaboration, engineered directly into your browser.
+            </p>
+          </header>
+          <div class="feature-showcase-grid">
+            <article class="feature-card">
+              <div class="feature-icon-box" aria-hidden="true">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="23 7 16 12 23 17 23 7"></polygon><rect x="1" y="5" width="15" height="14" rx="2" ry="2"></rect></svg>
+              </div>
+              <h3 class="feature-title">Video &amp; Audio Calling</h3>
+              <p class="feature-desc">
+                Direct WebRTC peer-to-peer audio and video encrypted with DTLS and SRTP. Real-time media travels directly between browsers with minimal latency and zero central media intermediaries.
+              </p>
+            </article>
+
+            <article class="feature-card">
+              <div class="feature-icon-box" aria-hidden="true">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg>
+              </div>
+              <h3 class="feature-title">High-Definition Screen Sharing</h3>
+              <p class="feature-desc">
+                Stream full desktops, individual application windows, or browser tabs at native resolution. Features dynamic aspect-ratio adaptation, presenter mode, and system audio capture.
+              </p>
+            </article>
+
+            <article class="feature-card">
+              <div class="feature-icon-box" aria-hidden="true">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="22" y1="12" x2="18" y2="12"></line><line x1="6" y1="12" x2="2" y2="12"></line><line x1="12" y1="6" x2="12" y2="2"></line><line x1="12" y1="22" x2="12" y2="18"></line></svg>
+              </div>
+              <h3 class="feature-title">Consensual Remote Assistance</h3>
+              <p class="feature-desc">
+                Provide live technical support and interactive collaboration. Presenters authorize remote mouse clicks, scrolling, and keyboard input via the native Setu Companion daemon over an authenticated local loopback link.
+              </p>
+            </article>
+
+            <article class="feature-card">
+              <div class="feature-icon-box" aria-hidden="true">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
+              </div>
+              <h3 class="feature-title">Encrypted Messaging &amp; File Transfer</h3>
+              <p class="feature-desc">
+                Communicate over real-time WebRTC DataChannels with client-side AES-GCM (256-bit) encryption. Stream large files peer-to-peer using chunked transfer and SHA-256 integrity verification without file size caps or cloud ingestion.
+              </p>
+            </article>
+
+            <article class="feature-card">
+              <div class="feature-icon-box" aria-hidden="true">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 19l7-7 3 3-7 7-3-3z"></path><path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"></path><path d="M2 2l7.586 7.586"></path><circle cx="11" cy="11" r="2"></circle></svg>
+              </div>
+              <h3 class="feature-title">Interactive Whiteboard &amp; Notes</h3>
+              <p class="feature-desc">
+                Sketch ideas simultaneously on a synchronized low-latency HTML5 canvas with pens, shapes, text, and eraser tools. Keep shared session notes saved directly into your browser's persistent storage.
+              </p>
+            </article>
+
+            <article class="feature-card">
+              <div class="feature-icon-box" aria-hidden="true">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="16 18 22 12 16 6"></polyline><polyline points="8 6 2 12 8 18"></polyline></svg>
+              </div>
+              <h3 class="feature-title">Software Freedom &amp; Transparency</h3>
+              <p class="feature-desc">
+                Licensed under the permissive Apache License 2.0. Inspect every line of client code, modify components freely, and host statically on GitHub Pages, Cloudflare Pages, or private air-gapped intranets.
+              </p>
+            </article>
+
+            <article class="feature-card">
+              <div class="feature-icon-box" aria-hidden="true">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+              </div>
+              <h3 class="feature-title">Local-First Privacy Architecture</h3>
+              <p class="feature-desc">
+                No user tracking cookies, centralized telemetry databases, or account registration. Saved room IDs, contact shortcuts, and preferences remain isolated inside your browser's local IndexedDB.
+              </p>
+            </article>
+          </div>
+        </section>
+
+        <!-- How It Works Section -->
+        <section id="howItWorksSection" class="marketing-section" aria-labelledby="howItWorksHeading">
+          <header class="marketing-section-header">
+            <h2 id="howItWorksHeading" class="marketing-section-title">How Setu Works</h2>
+            <p class="marketing-section-desc">
+              Four streamlined steps from room creation to an encrypted direct peer session.
+            </p>
+          </header>
+          <div class="workflow-steps-grid">
+            <article class="step-card">
+              <span class="step-num-badge">1</span>
+              <h3 class="step-title">Open or Host</h3>
+              <p class="step-desc">
+                Launch an instant disposable room or start your permanent reusable room code with one click. No registration, email verification, or passwords needed.
+              </p>
+            </article>
+
+            <article class="step-card">
+              <span class="step-num-badge">2</span>
+              <h3 class="step-title">Share Room Key</h3>
+              <p class="step-desc">
+                Send an 8-character code, direct invitation URL, or scan the on-screen QR code from a mobile device or secondary computer.
+              </p>
+            </article>
+
+            <article class="step-card">
+              <span class="step-num-badge">3</span>
+              <h3 class="step-title">Direct P2P Handshake</h3>
+              <p class="step-desc">
+                Both browsers exchange session descriptors over ephemeral serverless channels, establishing direct DTLS/SRTP encrypted WebRTC media streams.
+              </p>
+            </article>
+
+            <article class="step-card">
+              <span class="step-num-badge">4</span>
+              <h3 class="step-title">Collaborate &amp; Control</h3>
+              <p class="step-desc">
+                Communicate via video and chat, share screens, sketch on canvas, or enable consensual remote assistance through Setu Companion.
+              </p>
+            </article>
+          </div>
+        </section>
+
+        <!-- Freedom & Ownership Section -->
+        <section id="freedomSection" class="marketing-section" aria-labelledby="freedomHeading">
+          <header class="marketing-section-header">
+            <h2 id="freedomHeading" class="marketing-section-title">Your Meetings. Your Infrastructure. Your Freedom.</h2>
+            <p class="marketing-section-desc">
+              Why independent teams, privacy advocates, and engineers choose open-source peer-to-peer architecture.
+            </p>
+          </header>
+          <div class="freedom-pillars-grid">
+            <article class="freedom-card">
+              <span class="freedom-badge">Permissive License</span>
+              <h3 class="freedom-title">Full Source Transparency</h3>
+              <p class="freedom-desc">
+                Setu is published under the Apache License 2.0. Audit security protocols, verify zero data leaks, and tailor features to your specific compliance criteria.
+              </p>
+            </article>
+
+            <article class="freedom-card">
+              <span class="freedom-badge">Zero Lock-In</span>
+              <h3 class="freedom-title">Flexible Self-Hosting</h3>
+              <p class="freedom-desc">
+                Deploy as static assets on any web host, CDN, or internal intranet. No proprietary cloud backends or vendor-managed servers required.
+              </p>
+            </article>
+
+            <article class="freedom-card">
+              <span class="freedom-badge">Always Free</span>
+              <h3 class="freedom-title">Zero Subscription Extortion</h3>
+              <p class="freedom-desc">
+                No meeting duration limits, no seat licenses, and no forced feature degradation. 100% of Setu capabilities remain accessible without payment.
+              </p>
+            </article>
+
+            <article class="freedom-card">
+              <span class="freedom-badge">Local-First</span>
+              <h3 class="freedom-title">Data Sovereignty</h3>
+              <p class="freedom-desc">
+                All meeting recordings, chat logs, contacts, and canvas drawings are saved directly to your local file system or local browser storage.
+              </p>
+            </article>
+          </div>
+        </section>
+
+        <!-- Competitive Comparison Section -->
+        <section id="comparisonSection" class="marketing-section" aria-labelledby="comparisonHeading">
+          <header class="marketing-section-header">
+            <h2 id="comparisonHeading" class="marketing-section-title">Competitive Differentiation Matrix</h2>
+            <p class="marketing-section-desc">
+              How Setu P2P compares across privacy, remote control, licensing, and infrastructure against mainstream and open-source tools.
+            </p>
+          </header>
+          <div class="comp-filter-bar" id="compFilterBar" role="tablist" aria-label="Compare platforms">
+            <button type="button" class="comp-filter-btn active" data-col="all">All Platforms</button>
+            <button type="button" class="comp-filter-btn" data-col="gmeet">vs Google Meet</button>
+            <button type="button" class="comp-filter-btn" data-col="zoom">vs Zoom</button>
+            <button type="button" class="comp-filter-btn" data-col="teams">vs Teams</button>
+            <button type="button" class="comp-filter-btn" data-col="mirotalk">vs MiroTalk</button>
+            <button type="button" class="comp-filter-btn" data-col="pairux">vs PairUX</button>
+            <button type="button" class="comp-filter-btn" data-col="auffi">vs Auffi</button>
+          </div>
+          <div class="comp-scroll-hint" aria-hidden="true">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"></polyline></svg>
+            <span>Scroll or swipe table horizontally to compare all 7 platforms</span>
+          </div>
+          <div class="comparison-table-wrapper" role="region" aria-label="Competitive comparison matrix" tabindex="0">
+            <table class="comp-table" id="compTable">
+              <thead>
+                <tr>
+                  <th scope="col" class="comp-feature-col">Dimension / Capability</th>
+                  <th scope="col" class="col-setu">Setu P2P</th>
+                  <th scope="col">Google Meet</th>
+                  <th scope="col">Zoom Workplace</th>
+                  <th scope="col">Microsoft Teams</th>
+                  <th scope="col">MiroTalk P2P</th>
+                  <th scope="col">PairUX</th>
+                  <th scope="col">Auffi</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <th scope="row" class="comp-feature-col">Open-Source License</th>
+                  <td class="col-setu"><span class="chip-avail">Apache-2.0</span><span class="comp-subtext">Fully transparent source</span></td>
+                  <td><span class="chip-none">Proprietary</span><span class="comp-subtext">Closed source</span></td>
+                  <td><span class="chip-none">Proprietary</span><span class="comp-subtext">Closed source</span></td>
+                  <td><span class="chip-none">Proprietary</span><span class="comp-subtext">Closed source</span></td>
+                  <td><span class="chip-avail">AGPL-3.0</span><span class="comp-subtext">Copyleft license</span></td>
+                  <td><span class="chip-unver">Closed / Unverified</span><span class="comp-subtext">Proprietary platform</span></td>
+                  <td><span class="chip-none">Proprietary</span><span class="comp-subtext">Closed source</span></td>
+                </tr>
+                <tr>
+                  <th scope="row" class="comp-feature-col">Self-Hostable Architecture</th>
+                  <td class="col-setu"><span class="chip-avail">Static / Intranet</span><span class="comp-subtext">GitHub Pages, Cloudflare, Nginx</span></td>
+                  <td><span class="chip-none">No</span><span class="comp-subtext">Google cloud only</span></td>
+                  <td><span class="chip-none">No</span><span class="comp-subtext">Zoom cloud only</span></td>
+                  <td><span class="chip-none">No</span><span class="comp-subtext">Microsoft cloud only</span></td>
+                  <td><span class="chip-avail">Yes</span><span class="comp-subtext">Requires Node.js server</span></td>
+                  <td><span class="chip-none">No</span><span class="comp-subtext">Cloud hosted</span></td>
+                  <td><span class="chip-none">No</span><span class="comp-subtext">Cloud hosted</span></td>
+                </tr>
+                <tr>
+                  <th scope="row" class="comp-feature-col">Account Requirement</th>
+                  <td class="col-setu"><span class="chip-avail">Zero Accounts</span><span class="comp-subtext">Instant room join</span></td>
+                  <td><span class="chip-limit">Google Account</span><span class="comp-subtext">Mandatory for hosts</span></td>
+                  <td><span class="chip-limit">Account / Client</span><span class="comp-subtext">Encourages app download</span></td>
+                  <td><span class="chip-limit">Microsoft Account</span><span class="comp-subtext">Mandatory for hosts</span></td>
+                  <td><span class="chip-avail">Zero Accounts</span><span class="comp-subtext">Instant room join</span></td>
+                  <td><span class="chip-limit">Account Req.</span><span class="comp-subtext">Sign-up required</span></td>
+                  <td><span class="chip-limit">Account Req.</span><span class="comp-subtext">Sign-up required</span></td>
+                </tr>
+                <tr>
+                  <th scope="row" class="comp-feature-col">Remote Assistance / Desktop Control</th>
+                  <td class="col-setu"><span class="chip-avail">Built-in Companion</span><span class="comp-subtext">Consensual local daemon</span></td>
+                  <td><span class="chip-none">No</span><span class="comp-subtext">Separate Chrome Remote App</span></td>
+                  <td><span class="chip-limit">Paid / Enterprise</span><span class="comp-subtext">In-meeting support add-on</span></td>
+                  <td><span class="chip-limit">Quick Assist / Add-on</span><span class="comp-subtext">Separate OS app or license</span></td>
+                  <td><span class="chip-none">No</span><span class="comp-subtext">Conferencing only</span></td>
+                  <td><span class="chip-avail">Pair Programming</span><span class="comp-subtext">Dedicated remote tool</span></td>
+                  <td><span class="chip-none">No</span><span class="comp-subtext">Conferencing only</span></td>
+                </tr>
+                <tr>
+                  <th scope="row" class="comp-feature-col">Media Routing Architecture</th>
+                  <td class="col-setu"><span class="chip-avail">Direct 1-to-1 P2P</span><span class="comp-subtext">Encrypted mesh stream</span></td>
+                  <td><span class="chip-limit">Central Cloud SFU</span><span class="comp-subtext">Routed through Google</span></td>
+                  <td><span class="chip-limit">Central Cloud SFU</span><span class="comp-subtext">Routed through Zoom</span></td>
+                  <td><span class="chip-limit">Central Cloud SFU</span><span class="comp-subtext">Routed through Azure</span></td>
+                  <td><span class="chip-avail">Direct 1-to-1 P2P</span><span class="comp-subtext">Encrypted mesh stream</span></td>
+                  <td><span class="chip-limit">Cloud Relay</span><span class="comp-subtext">Vendor server transit</span></td>
+                  <td><span class="chip-limit">Cloud Relay</span><span class="comp-subtext">Vendor server transit</span></td>
+                </tr>
+                <tr>
+                  <th scope="row" class="comp-feature-col">Project Signaling Dependency</th>
+                  <td class="col-setu"><span class="chip-avail">Serverless / Offline</span><span class="comp-subtext">QR, manual, ephemeral code</span></td>
+                  <td><span class="chip-none">Proprietary Cloud</span><span class="comp-subtext">Google identity &amp; signaling</span></td>
+                  <td><span class="chip-none">Proprietary Cloud</span><span class="comp-subtext">Zoom signaling backend</span></td>
+                  <td><span class="chip-none">Proprietary Cloud</span><span class="comp-subtext">Teams signaling backend</span></td>
+                  <td><span class="chip-limit">Node.js Server</span><span class="comp-subtext">Requires running backend</span></td>
+                  <td><span class="chip-none">Proprietary Cloud</span><span class="comp-subtext">Vendor signaling</span></td>
+                  <td><span class="chip-none">Proprietary Cloud</span><span class="comp-subtext">Vendor signaling</span></td>
+                </tr>
+                <tr>
+                  <th scope="row" class="comp-feature-col">Telemetry &amp; Data Storage</th>
+                  <td class="col-setu"><span class="chip-avail">Local IndexedDB</span><span class="comp-subtext">Zero cloud telemetry</span></td>
+                  <td><span class="chip-none">Central Cloud</span><span class="comp-subtext">Account activity logged</span></td>
+                  <td><span class="chip-none">Central Cloud</span><span class="comp-subtext">Telemetry &amp; call metadata</span></td>
+                  <td><span class="chip-none">Central Cloud</span><span class="comp-subtext">M365 audit logging</span></td>
+                  <td><span class="chip-avail">Ephemeral Memory</span><span class="comp-subtext">No user database</span></td>
+                  <td><span class="chip-none">Central Cloud</span><span class="comp-subtext">User account DB</span></td>
+                  <td><span class="chip-none">Central Cloud</span><span class="comp-subtext">User account DB</span></td>
+                </tr>
+                <tr>
+                  <th scope="row" class="comp-feature-col">P2P File Transfer</th>
+                  <td class="col-setu"><span class="chip-avail">SHA-256 Verified P2P</span><span class="comp-subtext">Chunked DataChannel, no cap</span></td>
+                  <td><span class="chip-limit">Google Drive</span><span class="comp-subtext">Uploaded to cloud</span></td>
+                  <td><span class="chip-limit">Zoom Cloud</span><span class="comp-subtext">Transient cloud buffer</span></td>
+                  <td><span class="chip-limit">OneDrive / SharePoint</span><span class="comp-subtext">Uploaded to M365 cloud</span></td>
+                  <td><span class="chip-avail">WebRTC DataChannel</span><span class="comp-subtext">Direct browser transfer</span></td>
+                  <td><span class="chip-limit">Basic File Share</span><span class="comp-subtext">Limited capabilities</span></td>
+                  <td><span class="chip-limit">Cloud Upload</span><span class="comp-subtext">Uploaded to storage</span></td>
+                </tr>
+                <tr>
+                  <th scope="row" class="comp-feature-col">Client-Side Chat Security</th>
+                  <td class="col-setu"><span class="chip-avail">AES-GCM (256-bit)</span><span class="comp-subtext">WebCrypto client encryption</span></td>
+                  <td><span class="chip-limit">TLS / In-Transit</span><span class="comp-subtext">Server holds decryption keys</span></td>
+                  <td><span class="chip-limit">E2EE Optional</span><span class="comp-subtext">Disables advanced features</span></td>
+                  <td><span class="chip-limit">TLS / In-Transit</span><span class="comp-subtext">Server holds decryption keys</span></td>
+                  <td><span class="chip-avail">DTLS DataChannel</span><span class="comp-subtext">WebRTC encryption</span></td>
+                  <td><span class="chip-limit">TLS In-Transit</span><span class="comp-subtext">Vendor managed keys</span></td>
+                  <td><span class="chip-limit">TLS In-Transit</span><span class="comp-subtext">Vendor managed keys</span></td>
+                </tr>
+                <tr>
+                  <th scope="row" class="comp-feature-col">Call Recording Privacy</th>
+                  <td class="col-setu"><span class="chip-avail">Consensual Local Disk</span><span class="comp-subtext">Browser MediaRecorder</span></td>
+                  <td><span class="chip-limit">Paid Cloud Only</span><span class="comp-subtext">Google Drive storage</span></td>
+                  <td><span class="chip-limit">Local / Cloud Paid</span><span class="comp-subtext">Cloud requires license</span></td>
+                  <td><span class="chip-limit">Paid Cloud Only</span><span class="comp-subtext">Stream / SharePoint</span></td>
+                  <td><span class="chip-avail">Local Browser</span><span class="comp-subtext">Browser MediaRecorder</span></td>
+                  <td><span class="chip-unver">Unverified</span><span class="comp-subtext">Plan dependent</span></td>
+                  <td><span class="chip-limit">Cloud Storage</span><span class="comp-subtext">Server processed</span></td>
+                </tr>
+                <tr>
+                  <th scope="row" class="comp-feature-col">Meeting Duration Limit</th>
+                  <td class="col-setu"><span class="chip-avail">Unlimited</span><span class="comp-subtext">No arbitrary cutoffs</span></td>
+                  <td><span class="chip-limit">60 Minutes</span><span class="comp-subtext">Free tier limit</span></td>
+                  <td><span class="chip-none">40 Minutes</span><span class="comp-subtext">Strict free cutoff</span></td>
+                  <td><span class="chip-limit">60 Minutes</span><span class="comp-subtext">Free tier limit</span></td>
+                  <td><span class="chip-avail">Unlimited</span><span class="comp-subtext">No cutoff timer</span></td>
+                  <td><span class="chip-limit">Session Limited</span><span class="comp-subtext">Tier dependent</span></td>
+                  <td><span class="chip-limit">Tier Limited</span><span class="comp-subtext">Plan dependent</span></td>
+                </tr>
+                <tr>
+                  <th scope="row" class="comp-feature-col">Mandatory Subscription</th>
+                  <td class="col-setu"><span class="chip-avail">$0 / 100% Free</span><span class="comp-subtext">No premium paywalls</span></td>
+                  <td><span class="chip-limit">Workspace Sub</span><span class="comp-subtext">$6 - $18/user/mo</span></td>
+                  <td><span class="chip-limit">Pro / Enterprise</span><span class="comp-subtext">$13.33 - $22/user/mo</span></td>
+                  <td><span class="chip-limit">Microsoft 365</span><span class="comp-subtext">$4 - $12.50/user/mo</span></td>
+                  <td><span class="chip-avail">$0 / Free OSS</span><span class="comp-subtext">Host your own server</span></td>
+                  <td><span class="chip-limit">Commercial Tiers</span><span class="comp-subtext">Paid subscriptions</span></td>
+                  <td><span class="chip-limit">Commercial Tiers</span><span class="comp-subtext">Paid subscriptions</span></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <p class="comp-disclaimer-note">
+            Comparison data reflects default publicly available free and commercial configurations as of October 2026. Trade names and trademarks belong to their respective holders.
+          </p>
+        </section>
 
         <!-- Semantic FAQ & Architecture Landmark for AEO & AI Search Direct Answering -->
         <section class="welcome-faq-section" aria-labelledby="faqHeading">
@@ -1526,24 +1902,24 @@
   <div id="toastContainer" class="toast-container" aria-live="polite"></div>
 
   <!-- Core Subsystems & Application Logic -->
-  <script src="assets/js/storage.js"></script>
-  <script src="assets/js/sound.js"></script>
-  <script src="assets/js/signaling.js"></script>
-  <script src="assets/js/room-signaling.js"></script>
-  <script src="assets/js/identity.js"></script>
-  <script src="assets/js/webrtc.js"></script>
-  <script src="assets/js/presence.js"></script>
-  <script src="assets/js/chat.js"></script>
-  <script src="assets/js/file-transfer.js"></script>
-  <script src="assets/js/recording.js"></script>
-  <script src="assets/js/diagnostics.js"></script>
-  <script src="assets/js/qr-exchange.js"></script>
-  <script src="assets/js/shared-page.js"></script>
-  <script src="assets/js/privacy.js"></script>
-  <script src="assets/js/connection-ui.js"></script>
-  <script src="assets/js/meeting.js"></script>
-  <script src="assets/js/remote-control.js"></script>
-  <script src="assets/js/device-test.js"></script>
-  <script src="assets/js/app.js"></script>
+  <script defer src="assets/js/storage.js"></script>
+  <script defer src="assets/js/sound.js"></script>
+  <script defer src="assets/js/signaling.js"></script>
+  <script defer src="assets/js/room-signaling.js"></script>
+  <script defer src="assets/js/identity.js"></script>
+  <script defer src="assets/js/webrtc.js"></script>
+  <script defer src="assets/js/presence.js"></script>
+  <script defer src="assets/js/chat.js"></script>
+  <script defer src="assets/js/file-transfer.js"></script>
+  <script defer src="assets/js/recording.js"></script>
+  <script defer src="assets/js/diagnostics.js"></script>
+  <script defer src="assets/js/qr-exchange.js"></script>
+  <script defer src="assets/js/shared-page.js"></script>
+  <script defer src="assets/js/privacy.js"></script>
+  <script defer src="assets/js/connection-ui.js"></script>
+  <script defer src="assets/js/meeting.js"></script>
+  <script defer src="assets/js/remote-control.js"></script>
+  <script defer src="assets/js/device-test.js"></script>
+  <script defer src="assets/js/app.js"></script>
 </body>
 </html>

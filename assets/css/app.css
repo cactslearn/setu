@@ -651,6 +651,17 @@ body {
   transform: scale(0.96);
 }
 
+.pres-action-btn.active {
+  background: var(--btn-danger);
+  border-color: var(--btn-danger-hover);
+  color: #ffffff;
+}
+
+.pres-action-btn.active:hover {
+  background: var(--btn-danger-hover);
+  border-color: var(--btn-danger-hover);
+}
+
 .pres-badge {
   font-size: 0.65rem;
   background: var(--accent-blue);

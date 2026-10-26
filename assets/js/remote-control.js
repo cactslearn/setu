@@ -165,6 +165,7 @@ class RemoteControlModule {
           if (window.setuWebRTC) {
             window.setuWebRTC.sendData('control', JSON.stringify({ type: 'rc-revoke' }));
           }
+          if (window.showToast) window.showToast('Remote control released');
         } else {
           if (window.setuWebRTC) {
             window.setuWebRTC.sendData('control', JSON.stringify({ type: 'rc-request' }));
@@ -174,7 +175,7 @@ class RemoteControlModule {
             setTimeout(() => {
               if (!this.isViewerActive && reqText) {
                 requestBtn.disabled = false;
-                reqText.textContent = 'Request Control';
+                reqText.textContent = 'Request Remote';
               }
             }, 6000);
           }
@@ -189,6 +190,7 @@ class RemoteControlModule {
         if (window.setuWebRTC) {
           window.setuWebRTC.sendData('control', JSON.stringify({ type: 'rc-revoke' }));
         }
+        if (window.showToast) window.showToast('Remote control released');
       };
     }
   }
@@ -487,16 +489,13 @@ class RemoteControlModule {
 
       case 'rc-grant': {
         const reqBtn = document.getElementById('requestRemoteControlBtn');
-        const reqText = document.getElementById('requestRemoteControlText');
         if (reqBtn) reqBtn.disabled = false;
 
         if (packet.enabled) {
           this.startViewerControl();
-          if (reqText) reqText.textContent = 'Release Control';
           if (window.showToast) window.showToast('Remote control active: Click on shared screen to interact');
         } else {
           this.stopViewerControl();
-          if (reqText) reqText.textContent = 'Request Control';
           if (window.showToast) window.showToast(packet.reason || 'Remote control request declined');
         }
         break;
@@ -504,10 +503,6 @@ class RemoteControlModule {
 
       case 'rc-revoke': {
         this.stopViewerControl();
-        const reqText = document.getElementById('requestRemoteControlText');
-        const reqBtn = document.getElementById('requestRemoteControlBtn');
-        if (reqText) reqText.textContent = 'Request Control';
-        if (reqBtn) reqBtn.disabled = false;
         if (window.showToast) window.showToast('Remote control was ended');
         break;
       }
@@ -529,6 +524,17 @@ class RemoteControlModule {
   // --- Remote Viewer Mode (Input Capture & Normalization) ---
   startViewerControl() {
     this.isViewerActive = true;
+
+    const reqBtn = document.getElementById('requestRemoteControlBtn');
+    const reqText = document.getElementById('requestRemoteControlText');
+    if (reqText) reqText.textContent = 'Release Remote';
+    if (reqBtn) {
+      reqBtn.disabled = false;
+      reqBtn.classList.add('active');
+      reqBtn.setAttribute('aria-label', 'Release Remote Control');
+      reqBtn.title = 'Release remote control of shared screen';
+    }
+
     const overlay = document.getElementById('remoteControlOverlay');
     if (!overlay) return;
 
@@ -548,8 +554,17 @@ class RemoteControlModule {
   }
 
   stopViewerControl() {
-    if (!this.isViewerActive) return;
     this.isViewerActive = false;
+
+    const reqBtn = document.getElementById('requestRemoteControlBtn');
+    const reqText = document.getElementById('requestRemoteControlText');
+    if (reqText) reqText.textContent = 'Request Remote';
+    if (reqBtn) {
+      reqBtn.disabled = false;
+      reqBtn.classList.remove('active');
+      reqBtn.setAttribute('aria-label', 'Request Remote Control');
+      reqBtn.title = 'Request to interact with shared screen';
+    }
 
     const overlay = document.getElementById('remoteControlOverlay');
     if (overlay) {
@@ -736,6 +751,7 @@ class RemoteControlModule {
       if (window.setuWebRTC) {
         window.setuWebRTC.sendData('control', JSON.stringify({ type: 'rc-revoke' }));
       }
+      if (window.showToast) window.showToast('Remote control released');
       return;
     }
 
@@ -794,7 +810,12 @@ class RemoteControlModule {
       }
     } else if (isRemoteSharing) {
       if (hostBar) hostBar.style.display = 'none';
-      if (reqBtn) reqBtn.style.display = 'inline-flex';
+      if (reqBtn) {
+        reqBtn.style.display = 'inline-flex';
+        if (!this.isViewerActive) {
+          this.stopViewerControl();
+        }
+      }
     } else {
       if (hostBar) hostBar.style.display = 'none';
       if (reqBtn) reqBtn.style.display = 'none';

@@ -82,6 +82,17 @@ const VK_MAP = {
   Control: 17,
   Alt: 18,
   Meta: 91,
+  // Number row shifted symbols (VK_0 through VK_9: 48-57)
+  ')': 48,
+  '!': 49,
+  '@': 50,
+  '#': 51,
+  '$': 52,
+  '%': 53,
+  '^': 54,
+  '&': 55,
+  '*': 56,
+  '(': 57,
   // OEM Punctuation & Symbols
   ';': 186,
   ':': 186,
@@ -107,12 +118,25 @@ const VK_MAP = {
   '"': 222
 };
 
-function getVirtualKey(key) {
-  if (VK_MAP[key]) return VK_MAP[key];
+function getVirtualKey(key, code) {
+  if (key && VK_MAP[key]) return VK_MAP[key];
+  if (code && VK_MAP[code]) return VK_MAP[code];
+
+  // Map physical key codes (e.g., Digit4 -> 52, KeyA -> 65)
+  if (code) {
+    if (code.startsWith('Digit')) {
+      const num = parseInt(code.replace('Digit', ''), 10);
+      if (!isNaN(num) && num >= 0 && num <= 9) return 48 + num;
+    }
+    if (code.startsWith('Key') && code.length === 4) {
+      return code.toUpperCase().charCodeAt(3);
+    }
+  }
+
   if (key && key.length === 1) {
-    const code = key.charCodeAt(0);
+    const charCode = key.charCodeAt(0);
     // 0-9
-    if (code >= 48 && code <= 57) return code;
+    if (charCode >= 48 && charCode <= 57) return charCode;
     // A-Z / a-z
     const upper = key.toUpperCase();
     const upCode = upper.charCodeAt(0);
@@ -142,6 +166,17 @@ const X11_MAP = {
   Control: 'Control_L',
   Alt: 'Alt_L',
   Meta: 'Super_L',
+  // Number row shifted symbols
+  ')': 'parenright',
+  '!': 'exclam',
+  '@': 'at',
+  '#': 'numbersign',
+  '$': 'dollar',
+  '%': 'percent',
+  '^': 'asciicircum',
+  '&': 'ampersand',
+  '*': 'asterisk',
+  '(': 'parenleft',
   '.': 'period',
   ',': 'comma',
   ';': 'semicolon',
@@ -154,8 +189,12 @@ const X11_MAP = {
   '?': 'question'
 };
 
-function getX11Key(key) {
-  if (X11_MAP[key]) return X11_MAP[key];
+function getX11Key(key, code) {
+  if (key && X11_MAP[key]) return X11_MAP[key];
+  if (code && X11_MAP[code]) return X11_MAP[code];
+  if (code && code.startsWith('Digit')) {
+    return code.replace('Digit', '');
+  }
   if (key && key.length === 1) return key;
   return null;
 }
@@ -405,7 +444,7 @@ function handlePacket(packet, socket, setAuth, getAuth) {
 }
 
 function executeInputCommand(packet) {
-  const { action, x, y, button, dx, dy, key } = packet;
+  const { action, x, y, button, dx, dy, key, code } = packet;
 
   // Linux xdotool dispatch
   if (process.platform === 'linux' && hasXdotool) {
@@ -447,7 +486,7 @@ function executeInputCommand(packet) {
         break;
       }
       case 'keydown': {
-        const xk = getX11Key(key);
+        const xk = getX11Key(key, code);
         if (xk) {
           exec(`xdotool keydown ${xk}`, () => {});
           console.log(`[Input] Key down: ${key} (${xk})`);
@@ -455,7 +494,7 @@ function executeInputCommand(packet) {
         break;
       }
       case 'keyup': {
-        const xk = getX11Key(key);
+        const xk = getX11Key(key, code);
         if (xk) {
           exec(`xdotool keyup ${xk}`, () => {});
           console.log(`[Input] Key up: ${key} (${xk})`);
@@ -515,7 +554,7 @@ function executeInputCommand(packet) {
     }
 
     case 'keydown': {
-      const vk = getVirtualKey(key);
+      const vk = getVirtualKey(key, code);
       if (vk) {
         sendDriverCommand(`K ${vk} 0`);
         console.log(`[Input] Key down: ${key} (VK: ${vk})`);
@@ -526,7 +565,7 @@ function executeInputCommand(packet) {
     }
 
     case 'keyup': {
-      const vk = getVirtualKey(key);
+      const vk = getVirtualKey(key, code);
       if (vk) {
         sendDriverCommand(`K ${vk} 2`);
         console.log(`[Input] Key up: ${key} (VK: ${vk})`);

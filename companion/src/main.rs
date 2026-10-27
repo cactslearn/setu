@@ -267,7 +267,7 @@ async fn handle_connection(stream: TcpStream, peer_addr: SocketAddr, state: Arc<
                     dx,
                     dy,
                     key,
-                    code: _,
+                    code,
                 } => {
                     if !authenticated.load(Ordering::SeqCst) {
                         eprintln!("[Security] Rejected unauthenticated input command");
@@ -286,7 +286,7 @@ async fn handle_connection(stream: TcpStream, peer_addr: SocketAddr, state: Arc<
                         }
                     }
 
-                    execute_input(&state, &action, x, y, button.as_deref(), dx, dy, key.as_deref()).await;
+                    execute_input(&state, &action, x, y, button.as_deref(), dx, dy, key.as_deref(), code.as_deref()).await;
                 }
             }
         }
@@ -302,6 +302,7 @@ async fn execute_input(
     dx: Option<i32>,
     dy: Option<i32>,
     key_str: Option<&str>,
+    code_str: Option<&str>,
 ) {
     let mut enigo = state.enigo.lock().await;
 
@@ -348,14 +349,14 @@ async fn execute_input(
         }
         "keydown" => {
             if let Some(k) = key_str {
-                if let Some(enigo_key) = parse_key(k) {
+                if let Some(enigo_key) = parse_key(k, code_str) {
                     let _ = enigo.key(enigo_key, Direction::Press);
                 }
             }
         }
         "keyup" => {
             if let Some(k) = key_str {
-                if let Some(enigo_key) = parse_key(k) {
+                if let Some(enigo_key) = parse_key(k, code_str) {
                     let _ = enigo.key(enigo_key, Direction::Release);
                 }
             }
@@ -372,7 +373,7 @@ fn parse_button(btn: Option<&str>) -> Button {
     }
 }
 
-fn parse_key(key: &str) -> Option<Key> {
+fn parse_key(key: &str, code: Option<&str>) -> Option<Key> {
     match key {
         "Enter" => Some(Key::Return),
         "Backspace" => Some(Key::Backspace),
@@ -392,9 +393,30 @@ fn parse_key(key: &str) -> Option<Key> {
         "Control" => Some(Key::Control),
         "Alt" => Some(Key::Alt),
         "Meta" => Some(Key::Meta),
+        // Number row shifted symbols: mapped to base digit so held Shift generates expected character
+        ")" => Some(Key::Unicode('0')),
+        "!" => Some(Key::Unicode('1')),
+        "@" => Some(Key::Unicode('2')),
+        "#" => Some(Key::Unicode('3')),
+        "$" => Some(Key::Unicode('4')),
+        "%" => Some(Key::Unicode('5')),
+        "^" => Some(Key::Unicode('6')),
+        "&" => Some(Key::Unicode('7')),
+        "*" => Some(Key::Unicode('8')),
+        "(" => Some(Key::Unicode('9')),
         k if k.chars().count() == 1 => {
             k.chars().next().map(Key::Unicode)
         }
-        _ => None,
+        _ => {
+            if let Some(c) = code {
+                if c.starts_with("Digit") && c.len() == 6 {
+                    return c.chars().nth(5).map(Key::Unicode);
+                }
+                if c.starts_with("Key") && c.len() == 4 {
+                    return c.chars().nth(3).map(|ch| Key::Unicode(ch.to_ascii_lowercase()));
+                }
+            }
+            None
+        }
     }
 }

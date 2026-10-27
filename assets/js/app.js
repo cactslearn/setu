@@ -973,8 +973,8 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   document.getElementById('settingVideoInputSource')?.addEventListener('change', async (e) => {
     if (window.setuWebRTC && e.target.value) {
-      await window.setuWebRTC.switchVideoDevice(e.target.value);
-      if (window.showToast) window.showToast('Camera switched');
+      const ok = await window.setuWebRTC.switchVideoDevice(e.target.value);
+      if (window.showToast) window.showToast(ok ? 'Camera switched' : 'Could not switch camera');
     }
   });
 

@@ -1435,11 +1435,9 @@ class MeetingController {
         item.className = 'menu-item' + (d.deviceId === window.setuWebRTC.selectedVideoDeviceId ? ' selected' : '');
         item.textContent = d.label || 'Camera';
         item.addEventListener('click', async () => {
-          await window.setuWebRTC.switchVideoDevice(d.deviceId);
-          const localVideo = document.getElementById('localVideo');
-          if (localVideo) localVideo.srcObject = window.setuWebRTC.localStream;
+          const ok = await window.setuWebRTC.switchVideoDevice(d.deviceId);
           container.classList.remove('open');
-          if (window.showToast) window.showToast('Camera switched');
+          if (window.showToast) window.showToast(ok ? 'Camera switched' : 'Could not switch camera');
         });
         container.appendChild(item);
       });

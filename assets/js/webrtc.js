@@ -134,6 +134,13 @@ class WebRTCManager {
           audio: audioConstraints,
           video: videoConstraints
         });
+
+        const activeVid = this.localStream.getVideoTracks()[0];
+        if (activeVid && activeVid.getSettings) {
+          const s = activeVid.getSettings();
+          if (s.deviceId) this.selectedVideoDeviceId = s.deviceId;
+          if (s.facingMode) this.currentFacingMode = s.facingMode;
+        }
       }
 
       // Apply initial mic mute state
@@ -240,41 +247,152 @@ class WebRTCManager {
 
   /**
    * Switches video input device on-the-fly and replaces track on active sender.
+   * Releases existing camera hardware track FIRST to avoid mobile HAL NotReadableError sensor locks.
    */
-  async switchVideoDevice(deviceId) {
-    this.selectedVideoDeviceId = deviceId;
+  async switchVideoDevice(deviceId, facingMode = null) {
+    if (deviceId) {
+      this.selectedVideoDeviceId = deviceId;
+    }
+    if (facingMode) {
+      this.currentFacingMode = facingMode;
+    }
+
     if (this.isVideoMuted) return true;
 
-    try {
-      const newStream = await navigator.mediaDevices.getUserMedia({
-        video: { deviceId: { exact: deviceId }, width: { ideal: 1280 }, height: { ideal: 720 } }
-      });
-      const newTrack = newStream.getVideoTracks()[0];
+    // 1. Identify active video track
+    const oldTrack = this.localStream ? this.localStream.getVideoTracks()[0] : null;
 
-      if (this.localStream) {
-        const oldTrack = this.localStream.getVideoTracks()[0];
-        if (oldTrack) {
+    // 2. Identify active WebRTC video sender
+    const sender = (this.pc && !this.screenStream)
+      ? (this.videoSender || this.pc.getSenders().find(s => s.track && s.track.kind === 'video') || this.pc.getSenders().find(s => s.track === null))
+      : null;
+
+    // 3. Stop old camera track FIRST to release mobile hardware sensor.
+    // Mobile OS camera HALs (Android Camera2, iOS AVFoundation) enforce strict single-camera hardware locks.
+    if (oldTrack) {
+      try {
+        if (this.localStream) {
           this.localStream.removeTrack(oldTrack);
-          oldTrack.stop();
         }
-        this.localStream.addTrack(newTrack);
+        oldTrack.stop();
+      } catch (e) {
+        console.warn('[WebRTC] Error stopping old video track:', e);
       }
+    }
 
-      if (this.pc && !this.screenStream) {
-        const sender = this.pc.getSenders().find(s => s.track && s.track.kind === 'video');
-        if (sender) {
-          await sender.replaceTrack(newTrack);
+    // While switching, maintain SSRC pipeline on WebRTC sender using dummy placeholder so peer decoder does not freeze
+    if (sender) {
+      const dummy = this.dummyCamTrack || this.createDummyVideoTrack();
+      this.dummyCamTrack = dummy;
+      try {
+        await sender.replaceTrack(dummy);
+      } catch (_) {}
+    }
+
+    // Brief delay (80ms) allows mobile OS camera driver to fully teardown previous sensor pipeline
+    await new Promise(resolve => setTimeout(resolve, 80));
+
+    // 4. Build constraint strategies with fallbacks
+    const preset = CAMERA_QUALITY_PRESETS[this.currentCameraPreset] || CAMERA_QUALITY_PRESETS['720p'];
+    const attempts = [];
+
+    if (deviceId) {
+      attempts.push({
+        video: {
+          deviceId: { exact: deviceId },
+          width: { ideal: preset.width },
+          height: { ideal: preset.height },
+          frameRate: { ideal: preset.frameRate }
         }
-      } else {
-        this.cameraTrackBeforeShare = newTrack;
+      });
+      attempts.push({
+        video: {
+          deviceId: deviceId,
+          width: { ideal: preset.width },
+          height: { ideal: preset.height }
+        }
+      });
+    }
+
+    if (facingMode || this.currentFacingMode) {
+      const fm = facingMode || this.currentFacingMode;
+      attempts.push({
+        video: {
+          facingMode: { exact: fm },
+          width: { ideal: preset.width },
+          height: { ideal: preset.height }
+        }
+      });
+      attempts.push({
+        video: {
+          facingMode: { ideal: fm },
+          width: { ideal: preset.width },
+          height: { ideal: preset.height }
+        }
+      });
+    }
+
+    attempts.push({
+      video: {
+        width: { ideal: preset.width },
+        height: { ideal: preset.height }
       }
-      const localVideo = document.getElementById('localVideo');
-      if (localVideo) localVideo.srcObject = this.localStream;
-      return true;
-    } catch (e) {
-      console.error('Failed to switch video input device:', e);
+    });
+
+    attempts.push({ video: true });
+
+    let newStream = null;
+    let lastErr = null;
+
+    for (const constraints of attempts) {
+      try {
+        newStream = await navigator.mediaDevices.getUserMedia(constraints);
+        if (newStream && newStream.getVideoTracks().length > 0) {
+          break;
+        }
+      } catch (err) {
+        lastErr = err;
+        console.warn('[WebRTC] Camera constraint attempt failed, trying fallback:', constraints.video, err);
+      }
+    }
+
+    if (!newStream || newStream.getVideoTracks().length === 0) {
+      console.error('[WebRTC] All attempts to switch camera failed:', lastErr);
       return false;
     }
+
+    const newTrack = newStream.getVideoTracks()[0];
+    const settings = newTrack.getSettings ? newTrack.getSettings() : {};
+    if (settings.deviceId) this.selectedVideoDeviceId = settings.deviceId;
+    if (settings.facingMode) this.currentFacingMode = settings.facingMode;
+
+    if (!this.localStream) {
+      this.localStream = new MediaStream([newTrack]);
+    } else {
+      this.localStream.addTrack(newTrack);
+    }
+
+    if (sender) {
+      try {
+        await sender.replaceTrack(newTrack);
+      } catch (e) {
+        console.warn('[WebRTC] sender.replaceTrack note:', e);
+      }
+    } else {
+      this.cameraTrackBeforeShare = newTrack;
+    }
+
+    const localVideo = document.getElementById('localVideo');
+    if (localVideo) {
+      localVideo.srcObject = this.localStream;
+      localVideo.play().catch(e => console.warn('localVideo play error:', e));
+    }
+
+    if (window.setuMeeting) {
+      window.setuMeeting.updateLocalVideoDisplay(true);
+    }
+
+    return true;
   }
 
   /**
@@ -282,48 +400,44 @@ class WebRTCManager {
    */
   async flipCamera() {
     try {
+      // 1. Identify current track and facing mode
+      const curTrack = this.localStream ? this.localStream.getVideoTracks()[0] : null;
+      const curSettings = curTrack?.getSettings ? curTrack.getSettings() : {};
+      const curDeviceId = curSettings.deviceId || this.selectedVideoDeviceId;
+      const curFacing = curSettings.facingMode || this.currentFacingMode || 'user';
+
+      // Next facing mode
+      const nextFacing = (curFacing === 'environment') ? 'user' : 'environment';
+
+      // 2. Enumerate available video inputs
       const devices = await navigator.mediaDevices.enumerateDevices();
       const videoDevices = devices.filter(d => d.kind === 'videoinput');
 
+      let targetDeviceId = null;
+
       if (videoDevices.length > 1) {
-        const curIdx = videoDevices.findIndex(d => d.deviceId === this.selectedVideoDeviceId);
-        const nextIdx = (curIdx + 1) % videoDevices.length;
-        const target = videoDevices[nextIdx];
-        const ok = await this.switchVideoDevice(target.deviceId);
-        const localVideo = document.getElementById('localVideo');
-        if (localVideo) localVideo.srcObject = this.localStream;
-        return ok;
-      }
-
-      // If only 1 virtual/composite video device ID is exposed by mobile browser, toggle facingMode
-      this.currentFacingMode = (this.currentFacingMode === 'environment') ? 'user' : 'environment';
-      const newStream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: { exact: this.currentFacingMode }, width: { ideal: 1280 }, height: { ideal: 720 } }
-      }).catch(() => navigator.mediaDevices.getUserMedia({
-        video: { facingMode: this.currentFacingMode, width: { ideal: 1280 }, height: { ideal: 720 } }
-      }));
-
-      if (newStream) {
-        const newTrack = newStream.getVideoTracks()[0];
-        if (this.localStream) {
-          const oldTrack = this.localStream.getVideoTracks()[0];
-          if (oldTrack) {
-            this.localStream.removeTrack(oldTrack);
-            oldTrack.stop();
+        // Try matching next facing mode by device label (e.g. front / back / rear)
+        const targetByLabel = videoDevices.find(d => {
+          const l = (d.label || '').toLowerCase();
+          if (nextFacing === 'environment') {
+            return l.includes('back') || l.includes('rear') || l.includes('environment');
+          } else {
+            return l.includes('front') || l.includes('user') || l.includes('face');
           }
-          this.localStream.addTrack(newTrack);
-        }
-        if (this.pc && !this.screenStream) {
-          const sender = this.pc.getSenders().find(s => s.track && s.track.kind === 'video');
-          if (sender) await sender.replaceTrack(newTrack);
+        });
+
+        if (targetByLabel && targetByLabel.deviceId !== curDeviceId) {
+          targetDeviceId = targetByLabel.deviceId;
         } else {
-          this.cameraTrackBeforeShare = newTrack;
+          // Fallback to round-robin index cycling
+          const curIdx = videoDevices.findIndex(d => d.deviceId === curDeviceId);
+          const nextIdx = (curIdx >= 0) ? (curIdx + 1) % videoDevices.length : 1;
+          targetDeviceId = videoDevices[nextIdx]?.deviceId || null;
         }
-        const localVideo = document.getElementById('localVideo');
-        if (localVideo) localVideo.srcObject = this.localStream;
-        return true;
       }
-      return false;
+
+      // Delegate to switchVideoDevice with hardware release and fallback chain
+      return await this.switchVideoDevice(targetDeviceId, nextFacing);
     } catch (err) {
       console.warn('[WebRTC] flipCamera error:', err);
       return false;
@@ -440,12 +554,62 @@ class WebRTCManager {
     } else {
       // Camera turned ON: re-acquire media from hardware device
       try {
-        const videoConstraints = this.selectedVideoDeviceId
-          ? { deviceId: { exact: this.selectedVideoDeviceId }, width: { ideal: 1280 }, height: { ideal: 720 } }
-          : { width: { ideal: 1280 }, height: { ideal: 720 } };
+        let newStream = null;
+        const preset = CAMERA_QUALITY_PRESETS[this.currentCameraPreset] || CAMERA_QUALITY_PRESETS['720p'];
+        const attempts = [];
 
-        const newStream = await navigator.mediaDevices.getUserMedia({ video: videoConstraints });
+        if (this.selectedVideoDeviceId) {
+          attempts.push({
+            video: {
+              deviceId: { exact: this.selectedVideoDeviceId },
+              width: { ideal: preset.width },
+              height: { ideal: preset.height }
+            }
+          });
+          attempts.push({
+            video: {
+              deviceId: this.selectedVideoDeviceId,
+              width: { ideal: preset.width },
+              height: { ideal: preset.height }
+            }
+          });
+        }
+
+        if (this.currentFacingMode) {
+          attempts.push({
+            video: {
+              facingMode: { ideal: this.currentFacingMode },
+              width: { ideal: preset.width },
+              height: { ideal: preset.height }
+            }
+          });
+        }
+
+        attempts.push({
+          video: {
+            width: { ideal: preset.width },
+            height: { ideal: preset.height }
+          }
+        });
+        attempts.push({ video: true });
+
+        for (const constraints of attempts) {
+          try {
+            newStream = await navigator.mediaDevices.getUserMedia(constraints);
+            if (newStream && newStream.getVideoTracks().length > 0) {
+              break;
+            }
+          } catch (_) {}
+        }
+
+        if (!newStream || newStream.getVideoTracks().length === 0) {
+          throw new Error('Unable to re-acquire camera stream');
+        }
+
         const newTrack = newStream.getVideoTracks()[0];
+        const s = newTrack.getSettings ? newTrack.getSettings() : {};
+        if (s.deviceId) this.selectedVideoDeviceId = s.deviceId;
+        if (s.facingMode) this.currentFacingMode = s.facingMode;
 
         if (this.localStream) {
           this.localStream.addTrack(newTrack);

@@ -136,6 +136,18 @@ For more information, see [docs/PRIVACY.md](docs/PRIVACY.md), [docs/SECURITY.md]
 
 ---
 
+## Community Standards & Policies
+
+We welcome community engagement, contributions, and feedback adhering to our open-source and privacy-first values:
+
+- [Code of Conduct](CODE_OF_CONDUCT.md): Contributor Covenant v2.1 community guidelines.
+- [Contributing Guidelines](CONTRIBUTING.md): Core architectural invariants, local setup, and testing workflows.
+- [Accessibility Statement](ACCESSIBILITY.md): WCAG 2.1 Level AA commitments, supported assistive tech, and barrier reporting.
+- [Security Policy](SECURITY.md): Responsible disclosure process and cryptographic boundaries.
+- [Support & FAQ](SUPPORT.md): Common connection troubleshooting, NAT traversal, and help resources.
+
+---
+
 ## License
 
 Licensed under the Apache License, Version 2.0 (the "License"). You may obtain a copy of the License in the [LICENSE](LICENSE) file.

@@ -1,0 +1,11 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Security Vulnerability
+    url: https://github.com/cactslearn/setu/blob/main/SECURITY.md
+    about: Please report security vulnerabilities privately according to our security policy.
+  - name: Questions & Troubleshooting
+    url: https://github.com/cactslearn/setu/blob/main/SUPPORT.md
+    about: Read our troubleshooting guide, FAQ, and browser compatibility notes.
+  - name: Accessibility Feedback
+    url: https://github.com/cactslearn/setu/blob/main/ACCESSIBILITY.md
+    about: Read our accessibility commitment and learn how to report accessibility barriers.

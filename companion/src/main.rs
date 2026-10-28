@@ -348,17 +348,13 @@ async fn execute_input(
             }
         }
         "keydown" => {
-            if let Some(k) = key_str {
-                if let Some(enigo_key) = parse_key(k, code_str) {
-                    let _ = enigo.key(enigo_key, Direction::Press);
-                }
+            if let Some(enigo_key) = parse_key(key_str, code_str) {
+                let _ = enigo.key(enigo_key, Direction::Press);
             }
         }
         "keyup" => {
-            if let Some(k) = key_str {
-                if let Some(enigo_key) = parse_key(k, code_str) {
-                    let _ = enigo.key(enigo_key, Direction::Release);
-                }
+            if let Some(enigo_key) = parse_key(key_str, code_str) {
+                let _ = enigo.key(enigo_key, Direction::Release);
             }
         }
         _ => {}
@@ -373,50 +369,91 @@ fn parse_button(btn: Option<&str>) -> Button {
     }
 }
 
-fn parse_key(key: &str, code: Option<&str>) -> Option<Key> {
-    match key {
-        "Enter" => Some(Key::Return),
-        "Backspace" => Some(Key::Backspace),
-        "Tab" => Some(Key::Tab),
-        "Escape" => Some(Key::Escape),
-        "Space" | " " => Some(Key::Space),
-        "ArrowUp" => Some(Key::UpArrow),
-        "ArrowDown" => Some(Key::DownArrow),
-        "ArrowLeft" => Some(Key::LeftArrow),
-        "ArrowRight" => Some(Key::RightArrow),
-        "Delete" => Some(Key::Delete),
-        "Home" => Some(Key::Home),
-        "End" => Some(Key::End),
-        "PageUp" => Some(Key::PageUp),
-        "PageDown" => Some(Key::PageDown),
-        "Shift" => Some(Key::Shift),
-        "Control" => Some(Key::Control),
-        "Alt" => Some(Key::Alt),
-        "Meta" => Some(Key::Meta),
-        // Number row shifted symbols: mapped to base digit so held Shift generates expected character
-        ")" => Some(Key::Unicode('0')),
-        "!" => Some(Key::Unicode('1')),
-        "@" => Some(Key::Unicode('2')),
-        "#" => Some(Key::Unicode('3')),
-        "$" => Some(Key::Unicode('4')),
-        "%" => Some(Key::Unicode('5')),
-        "^" => Some(Key::Unicode('6')),
-        "&" => Some(Key::Unicode('7')),
-        "*" => Some(Key::Unicode('8')),
-        "(" => Some(Key::Unicode('9')),
-        k if k.chars().count() == 1 => {
-            k.chars().next().map(Key::Unicode)
-        }
-        _ => {
-            if let Some(c) = code {
-                if c.starts_with("Digit") && c.len() == 6 {
-                    return c.chars().nth(5).map(Key::Unicode);
-                }
-                if c.starts_with("Key") && c.len() == 4 {
-                    return c.chars().nth(3).map(|ch| Key::Unicode(ch.to_ascii_lowercase()));
-                }
+fn parse_key(key: Option<&str>, code: Option<&str>) -> Option<Key> {
+    if let Some(k) = key {
+        match k {
+            "Enter" => return Some(Key::Return),
+            "Backspace" => return Some(Key::Backspace),
+            "Tab" => return Some(Key::Tab),
+            "Escape" => return Some(Key::Escape),
+            "Space" | " " => return Some(Key::Space),
+            "ArrowUp" => return Some(Key::UpArrow),
+            "ArrowDown" => return Some(Key::DownArrow),
+            "ArrowLeft" => return Some(Key::LeftArrow),
+            "ArrowRight" => return Some(Key::RightArrow),
+            "Delete" => return Some(Key::Delete),
+            "Home" => return Some(Key::Home),
+            "End" => return Some(Key::End),
+            "PageUp" => return Some(Key::PageUp),
+            "PageDown" => return Some(Key::PageDown),
+            "Shift" => return Some(Key::Shift),
+            "Control" => return Some(Key::Control),
+            "Alt" => return Some(Key::Alt),
+            "Meta" => return Some(Key::Meta),
+            // Number row shifted symbols: mapped to base digit so held Shift generates expected character
+            ")" => return Some(Key::Unicode('0')),
+            "!" => return Some(Key::Unicode('1')),
+            "@" => return Some(Key::Unicode('2')),
+            "#" => return Some(Key::Unicode('3')),
+            "$" => return Some(Key::Unicode('4')),
+            "%" => return Some(Key::Unicode('5')),
+            "^" => return Some(Key::Unicode('6')),
+            "&" => return Some(Key::Unicode('7')),
+            "*" => return Some(Key::Unicode('8')),
+            "(" => return Some(Key::Unicode('9')),
+            // Shifted punctuation / OEM symbols: mapped to base keys so held Shift generates expected character
+            "{" => return Some(Key::Unicode('[')),
+            "}" => return Some(Key::Unicode(']')),
+            "|" => return Some(Key::Unicode('\\')),
+            "~" => return Some(Key::Unicode('`')),
+            "<" => return Some(Key::Unicode(',')),
+            ">" => return Some(Key::Unicode('.')),
+            "?" => return Some(Key::Unicode('/')),
+            ":" => return Some(Key::Unicode(';')),
+            "+" => return Some(Key::Unicode('=')),
+            "_" => return Some(Key::Unicode('-')),
+            "\"" => return Some(Key::Unicode('\'')),
+            // Unshifted punctuation symbols
+            "[" => return Some(Key::Unicode('[')),
+            "]" => return Some(Key::Unicode(']')),
+            "\\" => return Some(Key::Unicode('\\')),
+            "`" => return Some(Key::Unicode('`')),
+            ";" => return Some(Key::Unicode(';')),
+            "=" => return Some(Key::Unicode('=')),
+            "," => return Some(Key::Unicode(',')),
+            "-" => return Some(Key::Unicode('-')),
+            "." => return Some(Key::Unicode('.')),
+            "/" => return Some(Key::Unicode('/')),
+            "'" => return Some(Key::Unicode('\'')),
+            ch if ch.chars().count() == 1 => {
+                return ch.chars().next().map(Key::Unicode);
             }
-            None
+            _ => {}
         }
     }
+
+    if let Some(c) = code {
+        if c.starts_with("Digit") && c.len() == 6 {
+            return c.chars().nth(5).map(Key::Unicode);
+        }
+        if c.starts_with("Key") && c.len() == 4 {
+            return c.chars().nth(3).map(|ch| Key::Unicode(ch.to_ascii_lowercase()));
+        }
+        match c {
+            "BracketLeft" => return Some(Key::Unicode('[')),
+            "BracketRight" => return Some(Key::Unicode(']')),
+            "Backslash" => return Some(Key::Unicode('\\')),
+            "Backquote" => return Some(Key::Unicode('`')),
+            "Comma" => return Some(Key::Unicode(',')),
+            "Period" => return Some(Key::Unicode('.')),
+            "Slash" => return Some(Key::Unicode('/')),
+            "Semicolon" => return Some(Key::Unicode(';')),
+            "Equal" => return Some(Key::Unicode('=')),
+            "Minus" => return Some(Key::Unicode('-')),
+            "Quote" => return Some(Key::Unicode('\'')),
+            _ => {}
+        }
+    }
+
+    None
 }

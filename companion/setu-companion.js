@@ -115,7 +115,19 @@ const VK_MAP = {
   ']': 221,
   '}': 221,
   '\'': 222,
-  '"': 222
+  '"': 222,
+  // Physical key codes (e.g. from e.code)
+  BracketLeft: 219,
+  BracketRight: 221,
+  Backslash: 220,
+  Backquote: 192,
+  Comma: 188,
+  Period: 190,
+  Slash: 191,
+  Semicolon: 186,
+  Equal: 187,
+  Minus: 189,
+  Quote: 222
 };
 
 function getVirtualKey(key, code) {
@@ -186,7 +198,32 @@ const X11_MAP = {
   '=': 'equal',
   '+': 'plus',
   '/': 'slash',
-  '?': 'question'
+  '?': 'question',
+  // OEM & punctuation keysyms for X11 / xdotool
+  '<': 'less',
+  '>': 'greater',
+  '`': 'grave',
+  '~': 'asciitilde',
+  '{': 'braceleft',
+  '}': 'braceright',
+  '|': 'bar',
+  '\\': 'backslash',
+  '[': 'bracketleft',
+  ']': 'bracketright',
+  '\'': 'apostrophe',
+  '"': 'quotedbl',
+  // Physical codes
+  BracketLeft: 'bracketleft',
+  BracketRight: 'bracketright',
+  Backslash: 'backslash',
+  Backquote: 'grave',
+  Comma: 'comma',
+  Period: 'period',
+  Slash: 'slash',
+  Semicolon: 'semicolon',
+  Equal: 'equal',
+  Minus: 'minus',
+  Quote: 'apostrophe'
 };
 
 function getX11Key(key, code) {

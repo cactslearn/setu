@@ -23,6 +23,8 @@ use enigo::{
     Axis, Button, Coordinate, Direction, Enigo, Key, Keyboard, Mouse, Settings,
 };
 
+pub const COMPANION_VERSION: &str = "1.1.0";
+
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct AppConfig {
     pub port: u16,
@@ -71,7 +73,10 @@ enum IncomingPacket {
 #[serde(tag = "type")]
 enum OutgoingPacket {
     #[serde(rename = "rc-auth-success")]
-    AuthSuccess,
+    AuthSuccess {
+        version: String,
+        platform: String,
+    },
     #[serde(rename = "rc-auth-failed")]
     AuthFailed { reason: String },
     #[serde(rename = "rc-override")]
@@ -243,7 +248,10 @@ async fn handle_connection(stream: TcpStream, peer_addr: SocketAddr, state: Arc<
                     if passkey == state.config.passkey {
                         authenticated.store(true, Ordering::SeqCst);
                         println!("[Auth] Client authenticated successfully from {}", peer_addr);
-                        let resp = serde_json::to_string(&OutgoingPacket::AuthSuccess).unwrap_or_default();
+                        let resp = serde_json::to_string(&OutgoingPacket::AuthSuccess {
+                            version: COMPANION_VERSION.to_string(),
+                            platform: std::env::consts::OS.to_string(),
+                        }).unwrap_or_default();
                         let _ = write.send(Message::Text(resp)).await;
                     } else {
                         println!("[Auth] Passkey mismatch from {}", peer_addr);

@@ -10,6 +10,8 @@ const fs = require('fs');
 const path = require('path');
 const { spawn, exec } = require('child_process');
 
+const COMPANION_VERSION = '1.1.0';
+
 // Parse CLI arguments
 const args = process.argv.slice(2);
 let portOverride = null;
@@ -335,7 +337,7 @@ const server = http.createServer((req, res) => {
     res.end(JSON.stringify({
       status: 'ok',
       service: 'setu-companion',
-      version: '1.0.0',
+      version: COMPANION_VERSION,
       port: config.port,
       platform: process.platform,
       resolution: `${screenWidth}x${screenHeight}`
@@ -379,7 +381,11 @@ server.on('upgrade', (req, socket) => {
   if (providedKey && providedKey === config.passkey) {
     authenticated = true;
     console.log('[Auth] Client authenticated via connection parameter');
-    sendWsMessage(socket, { type: 'rc-auth-success' });
+    sendWsMessage(socket, {
+      type: 'rc-auth-success',
+      version: COMPANION_VERSION,
+      platform: process.platform
+    });
   }
 
   let bufferQueue = Buffer.alloc(0);
@@ -457,7 +463,11 @@ function handlePacket(packet, socket, setAuth, getAuth) {
     if (packet.passkey === config.passkey) {
       setAuth();
       console.log('[Auth] Security passkey verified successfully');
-      sendWsMessage(socket, { type: 'rc-auth-success' });
+      sendWsMessage(socket, {
+        type: 'rc-auth-success',
+        version: COMPANION_VERSION,
+        platform: process.platform
+      });
     } else {
       console.warn(`[Auth] Passkey mismatch. Configured in companion: "${config.passkey}", Received from browser: "${packet.passkey || ''}". Closing connection.`);
       sendWsMessage(socket, { type: 'rc-auth-failed', reason: 'Passkey mismatch' });

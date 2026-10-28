@@ -111,6 +111,11 @@ cargo build --release
 ```
 The resulting executable will be placed in `companion/target/release/setu-companion`.
 
+### 4.3 Version Handshake & Seamless Upgrades (Preserving config.json)
+- Setu Web and Setu Companion exchange version numbers during the initial `rc-auth` handshake (`rc-auth-success` payload includes `version: "1.1.0"`).
+- If the companion is older than the required version, the host interface displays an **Update Required** warning badge with a direct one-click download modal.
+- **Config Preservation Architecture:** Release packages distribute `config.example.json` rather than `config.json`. The launcher scripts (`run-companion.bat` and `run-companion.sh`) create `config.json` only if it does not already exist. When hosts download and extract a new companion release, extracting with "Replace existing files" updates all executables and scripts while leaving their existing `config.json` (and secret passkey) completely intact.
+
 ---
 
 ## 5. Troubleshooting & FAQ

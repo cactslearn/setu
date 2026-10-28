@@ -18,6 +18,12 @@ class RemoteControlModule {
     this.rafId = null;
     this.pendingMove = null;
 
+    // Version management
+    this.COMPANION_REQUIRED_VERSION = '1.1.0';
+    this.COMPANION_LATEST_VERSION = '1.1.0';
+    this.companionVersion = null;
+    this.isCompanionOutdated = false;
+
     // Bound event handlers for clean attach/detach
     this.onOverlayMouseMove = this.handleOverlayMouseMove.bind(this);
     this.onOverlayMouseDown = this.handleOverlayMouseDown.bind(this);
@@ -110,14 +116,28 @@ class RemoteControlModule {
         const result = await this.testCompanionConnection(port, passkey);
         if (statusBadge) {
           if (result.success) {
-            statusBadge.textContent = 'Connected';
-            statusBadge.className = 'badge badge-success';
+            if (result.isOutdated) {
+              statusBadge.textContent = `Update Req (v${result.version})`;
+              statusBadge.className = 'badge badge-warning';
+              statusBadge.style.cursor = 'pointer';
+              statusBadge.title = `Update required: v${result.version} -> v${this.COMPANION_REQUIRED_VERSION}. Click for guide.`;
+              statusBadge.onclick = () => this.showCompanionUpdateModal();
+            } else {
+              statusBadge.textContent = `Connected (v${result.version})`;
+              statusBadge.className = 'badge badge-success';
+              statusBadge.style.cursor = 'default';
+              statusBadge.onclick = null;
+            }
           } else if (result.reason === 'passkey_mismatch') {
             statusBadge.textContent = 'Passkey Mismatch';
             statusBadge.className = 'badge badge-danger';
+            statusBadge.style.cursor = 'default';
+            statusBadge.onclick = null;
           } else {
             statusBadge.textContent = 'Disconnected';
             statusBadge.className = 'badge badge-secondary';
+            statusBadge.style.cursor = 'default';
+            statusBadge.onclick = null;
           }
         }
         if (window.showToast) window.showToast(result.message);
@@ -126,7 +146,7 @@ class RemoteControlModule {
 
     if (downloadFromSettingsBtn) {
       downloadFromSettingsBtn.onclick = () => {
-        this.triggerBundleDownload();
+        this.showCompanionUpdateModal();
       };
     }
   }
@@ -251,6 +271,100 @@ class RemoteControlModule {
     }
   }
 
+  compareVersions(v1, v2) {
+    if (!v1 || typeof v1 !== 'string') return -1;
+    if (!v2 || typeof v2 !== 'string') return 1;
+    const p1 = v1.replace(/^v/i, '').split('.').map((n) => parseInt(n, 10) || 0);
+    const p2 = v2.replace(/^v/i, '').split('.').map((n) => parseInt(n, 10) || 0);
+    const maxLen = Math.max(p1.length, p2.length);
+    for (let i = 0; i < maxLen; i++) {
+      const a = p1[i] || 0;
+      const b = p2[i] || 0;
+      if (a > b) return 1;
+      if (a < b) return -1;
+    }
+    return 0;
+  }
+
+  showCompanionUpdateModal() {
+    const existingModal = document.getElementById('companionUpdateModal');
+    if (existingModal) existingModal.remove();
+
+    const bundle = this.getPlatformBundleInfo();
+    const installed = this.companionVersion || '1.0.0';
+    const latest = this.COMPANION_LATEST_VERSION;
+
+    const modal = document.createElement('div');
+    modal.id = 'companionUpdateModal';
+    modal.className = 'modal-backdrop active';
+    modal.setAttribute('role', 'dialog');
+    modal.setAttribute('aria-modal', 'true');
+    modal.setAttribute('aria-labelledby', 'compUpdateModalTitle');
+
+    modal.innerHTML = `
+      <div class="dialog-card" style="max-width: 520px; padding: 0;">
+        <div class="dialog-header" style="padding: 1rem 1.25rem; border-bottom: 1px solid var(--border-subtle); display: flex; justify-content: space-between; align-items: center;">
+          <strong id="compUpdateModalTitle" style="font-size: 1rem; color: var(--text-main);">Update Setu Companion</strong>
+          <button id="closeCompUpdateModalBtn" class="tool-icon-btn" style="width: 28px; height: 28px;" aria-label="Close dialog">✕</button>
+        </div>
+        <div class="dialog-body" style="padding: 1.25rem; font-size: 0.85rem; color: var(--text-secondary); line-height: 1.5;">
+          <div style="display: flex; align-items: center; justify-content: space-between; background: var(--bg-surface-elevated); padding: 0.75rem 1rem; border-radius: 8px; margin-bottom: 1rem; border: 1px solid var(--border-subtle);">
+            <div>
+              <div style="font-size: 0.75rem; color: var(--text-muted);">Installed Version</div>
+              <div style="font-weight: 700; color: var(--accent-rose); font-size: 0.95rem;">v\${installed}</div>
+            </div>
+            <div style="font-size: 1.2rem; color: var(--text-muted);">→</div>
+            <div>
+              <div style="font-size: 0.75rem; color: var(--text-muted);">Required Version</div>
+              <div style="font-weight: 700; color: var(--accent-teal); font-size: 0.95rem;">v\${latest}</div>
+            </div>
+          </div>
+
+          <p style="margin: 0 0 0.5rem 0; color: var(--text-main); font-weight: 600;">
+            Why is this update required?
+          </p>
+          <ul style="margin: 0 0 1rem 1.25rem; padding: 0; font-size: 0.825rem;">
+            <li>Fixes special characters typing ($, &lt;, &gt;, {, }, |, ~, etc.).</li>
+            <li>Enables lag-free 60 FPS remote mouse tracking with zero-latency channel.</li>
+            <li>Eliminates false-positive mouse freeze on scaled displays.</li>
+          </ul>
+
+          <div style="background: rgba(66, 133, 244, 0.08); border-left: 3px solid var(--accent-blue); padding: 0.75rem 1rem; border-radius: 4px; margin-bottom: 1.25rem;">
+            <strong style="color: var(--text-main); display: block; margin-bottom: 0.25rem;">Your existing config.json is safe</strong>
+            <span style="font-size: 0.775rem;">When you extract the update into your existing companion folder, choose <strong>Replace</strong>. Your existing <code>config.json</code> (with your private passkey and port) is preserved and will <strong>never</strong> be overwritten.</span>
+          </div>
+
+          <div style="font-weight: 600; color: var(--text-main); margin-bottom: 0.4rem;">3 Simple Steps to Update:</div>
+          <ol style="margin: 0 0 1.25rem 1.25rem; padding: 0; font-size: 0.825rem; line-height: 1.6;">
+            <li>Close your currently running Setu Companion window.</li>
+            <li>Click <strong>Download Update</strong> below and extract files into your companion folder (replace existing files).</li>
+            <li>Launch <code>run-companion.bat</code> (or <code>./run-companion.sh</code>).</li>
+          </ol>
+
+          <div style="display: flex; justify-content: flex-end; gap: 0.6rem; border-top: 1px solid var(--border-subtle); padding-top: 1rem;">
+            <button id="cancelCompUpdateModalBtn" class="btn btn-secondary btn-sm" type="button">Later</button>
+            <button id="downloadCompUpdateModalBtn" class="btn btn-primary btn-sm" type="button">
+              Download Update for \${bundle.name}
+            </button>
+          </div>
+        </div>
+      </div>
+    `;
+
+    document.body.appendChild(modal);
+
+    const closeModal = () => modal.remove();
+    document.getElementById('closeCompUpdateModalBtn')?.addEventListener('click', closeModal);
+    document.getElementById('cancelCompUpdateModalBtn')?.addEventListener('click', closeModal);
+    document.getElementById('downloadCompUpdateModalBtn')?.addEventListener('click', () => {
+      this.triggerBundleDownload();
+      closeModal();
+    });
+    modal.addEventListener('click', (e) => {
+      if (e.target === modal) closeModal();
+    });
+  }
+
   async testCompanionConnection(port, passkey) {
     const targetPort = port || this.companionPort;
     const targetKey = passkey !== undefined ? passkey : this.companionPasskey;
@@ -287,9 +401,15 @@ class RemoteControlModule {
               resolved = true;
               clearTimeout(timer);
               socket.close();
+              const version = data.version || '1.0.0';
+              const isOutdated = this.compareVersions(version, this.COMPANION_REQUIRED_VERSION) < 0;
               resolve({
                 success: true,
-                message: `Setu Companion verified and active on port ${targetPort}.`
+                version,
+                isOutdated,
+                message: isOutdated
+                  ? `Setu Companion found (v${version}), but update to v${this.COMPANION_REQUIRED_VERSION} is required.`
+                  : `Setu Companion verified and active on port ${targetPort} (v${version}).`
               });
             } else if (data.type === 'rc-auth-failed') {
               resolved = true;
@@ -371,11 +491,45 @@ class RemoteControlModule {
         try {
           const msg = JSON.parse(event.data);
           if (msg.type === 'rc-auth-success') {
-            console.log('[RemoteControl] Companion authentication successful.');
+            this.companionVersion = msg.version || '1.0.0';
+            this.isCompanionOutdated = this.compareVersions(this.companionVersion, this.COMPANION_REQUIRED_VERSION) < 0;
+            console.log(`[RemoteControl] Companion authenticated. Version: ${this.companionVersion} (Required: ${this.COMPANION_REQUIRED_VERSION})`);
+
             if (badge) {
-              badge.textContent = 'Active';
-              badge.className = 'badge badge-success';
+              if (this.isCompanionOutdated) {
+                badge.textContent = `Update Req (v${this.companionVersion})`;
+                badge.className = 'badge badge-warning';
+                badge.style.cursor = 'pointer';
+                badge.title = `Your Setu Companion is v${this.companionVersion}, but v${this.COMPANION_REQUIRED_VERSION} is required. Click to view update guide.`;
+                badge.onclick = () => this.showCompanionUpdateModal();
+              } else {
+                badge.textContent = `Active (v${this.companionVersion})`;
+                badge.className = 'badge badge-success';
+                badge.style.cursor = 'default';
+                badge.title = `Setu Companion v${this.companionVersion} active and up to date.`;
+                badge.onclick = null;
+              }
             }
+
+            const settingsBadge = document.getElementById('companionSettingsStatusBadge');
+            if (settingsBadge) {
+              if (this.isCompanionOutdated) {
+                settingsBadge.textContent = `Update Req (v${this.companionVersion})`;
+                settingsBadge.className = 'badge badge-warning';
+                settingsBadge.style.cursor = 'pointer';
+                settingsBadge.onclick = () => this.showCompanionUpdateModal();
+              } else {
+                settingsBadge.textContent = `Connected (v${this.companionVersion})`;
+                settingsBadge.className = 'badge badge-success';
+                settingsBadge.style.cursor = 'default';
+                settingsBadge.onclick = null;
+              }
+            }
+
+            if (this.isCompanionOutdated && window.showToast) {
+              window.showToast(`Setu Companion update available (v${this.companionVersion} -> v${this.COMPANION_REQUIRED_VERSION}). Click badge for instructions.`);
+            }
+
             if (this.pollTimer) {
               clearInterval(this.pollTimer);
               this.pollTimer = null;
@@ -470,6 +624,9 @@ class RemoteControlModule {
         console.log('[RemoteControl] Remote peer requested control.');
         const isReady = this.allowRemoteControl && this.ws && this.ws.readyState === WebSocket.OPEN;
         if (isReady) {
+          if (this.isCompanionOutdated && window.showToast) {
+            window.showToast(`Notice: Companion v${this.companionVersion} is outdated. Click "Update Req" badge to update without losing settings.`);
+          }
           if (window.setuWebRTC) {
             window.setuWebRTC.sendData('control', JSON.stringify({ type: 'rc-grant', enabled: true }));
             if (window.setuWebRTC.setRemoteControlActive) {

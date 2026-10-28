@@ -44,6 +44,10 @@ Security:
 - Listens exclusively on 127.0.0.1 (localhost).
 - Requires your security passkey to execute any commands.
 - Host supremacy: If you touch your physical mouse, remote commands are immediately paused.
+
+Updating Setu Companion:
+When an update is released, simply extract the new files into this folder and replace them.
+Your existing config.json (which contains your private passkey and port) is never overwritten.
 "@
 Set-Content -Path (Join-Path $WinStage "README.txt") -Value $WinReadme
 
@@ -51,6 +55,11 @@ $WinBat = @"
 @echo off
 title Setu Companion Daemon
 cd /d "%~dp0"
+if not exist "config.json" (
+    if exist "config.example.json" (
+        copy "config.example.json" "config.json" >nul
+    )
+)
 if exist "setu-companion.exe" (
     start "" "setu-companion.exe" %*
 ) else (
@@ -59,7 +68,7 @@ if exist "setu-companion.exe" (
 "@
 Set-Content -Path (Join-Path $WinStage "run-companion.bat") -Value $WinBat
 
-Copy-Item (Join-Path $ScriptDir "config.example.json") (Join-Path $WinStage "config.json")
+Copy-Item (Join-Path $ScriptDir "config.example.json") (Join-Path $WinStage "config.example.json")
 Copy-Item (Join-Path $ScriptDir "setu-companion.js") (Join-Path $WinStage "setu-companion.js")
 Copy-Item (Join-Path $ScriptDir "win-driver.ps1") (Join-Path $WinStage "win-driver.ps1")
 
@@ -80,6 +89,9 @@ $UnixSh = @'
 #!/bin/sh
 DIR="$(cd "$(dirname "$0")" >/dev/null 2>&1 && pwd)"
 cd "$DIR"
+if [ ! -f "./config.json" ] && [ -f "./config.example.json" ]; then
+    cp "./config.example.json" "./config.json"
+fi
 if [ -f "./setu-companion" ]; then
     chmod +x ./setu-companion
     exec ./setu-companion "$@"
@@ -102,6 +114,10 @@ Grant Accessibility permission in System Settings -> Privacy & Security -> Acces
 How to Run:
 1. Open Terminal in this folder.
 2. Run: ./run-companion.sh
+
+Updating Setu Companion:
+Extract the new bundle into this folder and overwrite existing files.
+Your existing config.json is never overwritten.
 "@
 Write-UnixFile (Join-Path $MacStage "README.txt") $MacReadme
 Write-UnixFile (Join-Path $MacStage "run-companion.sh") $UnixSh
@@ -110,7 +126,7 @@ $jsContent = [System.IO.File]::ReadAllText((Join-Path $ScriptDir "setu-companion
 Write-UnixFile (Join-Path $MacStage "setu-companion.js") $jsContent
 
 $cfgContent = [System.IO.File]::ReadAllText((Join-Path $ScriptDir "config.example.json"))
-Write-UnixFile (Join-Path $MacStage "config.json") $cfgContent
+Write-UnixFile (Join-Path $MacStage "config.example.json") $cfgContent
 
 # If cargo compiled binary exists, copy it
 $CargoMacBinary = Join-Path $ScriptDir "target\release\setu-companion"
@@ -141,11 +157,15 @@ For native input execution, install xdotool:
 How to Run:
 1. Open Terminal in this folder.
 2. Run: chmod +x run-companion.sh && ./run-companion.sh
+
+Updating Setu Companion:
+Extract the new bundle into this folder and overwrite existing files.
+Your existing config.json is never overwritten.
 "@
 Write-UnixFile (Join-Path $LinuxStage "README.txt") $LinuxReadme
 Write-UnixFile (Join-Path $LinuxStage "run-companion.sh") $UnixSh
 Write-UnixFile (Join-Path $LinuxStage "setu-companion.js") $jsContent
-Write-UnixFile (Join-Path $LinuxStage "config.json") $cfgContent
+Write-UnixFile (Join-Path $LinuxStage "config.example.json") $cfgContent
 
 # If cargo compiled binary exists, copy it
 $CargoLinuxBinary = Join-Path $ScriptDir "target\release\setu-companion"

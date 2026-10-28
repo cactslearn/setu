@@ -472,6 +472,9 @@ class RemoteControlModule {
         if (isReady) {
           if (window.setuWebRTC) {
             window.setuWebRTC.sendData('control', JSON.stringify({ type: 'rc-grant', enabled: true }));
+            if (window.setuWebRTC.setRemoteControlActive) {
+              window.setuWebRTC.setRemoteControlActive(true);
+            }
           }
           if (window.showToast) window.showToast('Remote control access granted to peer');
         } else {
@@ -503,6 +506,9 @@ class RemoteControlModule {
 
       case 'rc-revoke': {
         this.stopViewerControl();
+        if (window.setuWebRTC && window.setuWebRTC.setRemoteControlActive) {
+          window.setuWebRTC.setRemoteControlActive(false);
+        }
         if (window.showToast) window.showToast('Remote control was ended');
         break;
       }
@@ -654,12 +660,16 @@ class RemoteControlModule {
     if (!this.rafId) {
       this.rafId = requestAnimationFrame(() => {
         if (this.pendingMove && window.setuWebRTC) {
-          window.setuWebRTC.sendData('control', JSON.stringify({
+          const payload = JSON.stringify({
             type: 'rc-input',
             action: 'mousemove',
             x: this.pendingMove.x,
             y: this.pendingMove.y
-          }));
+          });
+          // Send over unordered zero-latency mouse channel if open, else fallback to control
+          if (!window.setuWebRTC.sendData('mouse', payload)) {
+            window.setuWebRTC.sendData('control', payload);
+          }
         }
         this.pendingMove = null;
         this.rafId = null;
@@ -821,6 +831,9 @@ class RemoteControlModule {
       if (reqBtn) reqBtn.style.display = 'none';
       this.stopViewerControl();
       this.stopHostCompanionBridge();
+      if (window.setuWebRTC && window.setuWebRTC.setRemoteControlActive) {
+        window.setuWebRTC.setRemoteControlActive(false);
+      }
     }
   }
 

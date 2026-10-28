@@ -50,7 +50,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       window.setuChat.receiveMessage(data);
     } else if (channelLabel === 'file') {
       window.setuFileTransfer.handleChunk(data);
-    } else if (channelLabel === 'control') {
+    } else if (channelLabel === 'control' || channelLabel === 'mouse') {
       try {
         const packet = JSON.parse(data);
         handleControlPacket(packet);

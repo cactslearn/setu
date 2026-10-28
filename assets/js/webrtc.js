@@ -14,9 +14,10 @@ const CAMERA_QUALITY_PRESETS = {
 };
 
 const SCREEN_SHARE_PRESETS = {
-  'sharpness': { contentHint: 'detail', maxFramerate: 10, width: 1920, height: 1080 },
-  'balanced': { contentHint: 'text', maxFramerate: 15, width: 1920, height: 1080 },
-  'motion': { contentHint: 'motion', maxFramerate: 30, width: 1280, height: 720 }
+  'sharpness': { contentHint: 'detail', maxFramerate: 30, width: 1920, height: 1080 },
+  'balanced': { contentHint: 'text', maxFramerate: 30, width: 1920, height: 1080 },
+  'motion': { contentHint: 'motion', maxFramerate: 60, width: 1280, height: 720 },
+  'remote-control': { contentHint: 'motion', maxFramerate: 60, width: 1920, height: 1080 }
 };
 
 class WebRTCManager {
@@ -42,6 +43,7 @@ class WebRTCManager {
     this.channels = {
       chat: null,
       control: null,
+      mouse: null,
       file: null
     };
 
@@ -707,6 +709,33 @@ class WebRTCManager {
   }
 
   /**
+   * Automatically elevates screen share framerate to 60/30 FPS during an active remote control session.
+   */
+  setRemoteControlActive(isActive) {
+    if (this.screenStream) {
+      const track = this.screenStream.getVideoTracks()[0];
+      if (track) {
+        try {
+          if (isActive) {
+            track.contentHint = 'motion';
+            track.applyConstraints({
+              frameRate: { ideal: 60, max: 60 }
+            }).catch(() => {
+              track.applyConstraints({ frameRate: { ideal: 30, max: 30 } }).catch(() => {});
+            });
+          } else {
+            const preset = SCREEN_SHARE_PRESETS[this.currentScreenMode] || SCREEN_SHARE_PRESETS['sharpness'];
+            track.contentHint = preset.contentHint;
+            track.applyConstraints({
+              frameRate: { max: preset.maxFramerate }
+            }).catch(() => {});
+          }
+        } catch (_) {}
+      }
+    }
+  }
+
+  /**
    * Dynamic degradation when network is struggling.
    */
   async adaptQualityDegradation(isDegraded) {
@@ -967,7 +996,7 @@ class WebRTCManager {
    * Binds event handlers to a DataChannel.
    */
   bindDataChannel(label, channel) {
-    if (label === 'chat' || label === 'control' || label === 'file') {
+    if (label === 'chat' || label === 'control' || label === 'mouse' || label === 'file') {
       this.channels[label] = channel;
     }
 
@@ -1006,6 +1035,10 @@ class WebRTCManager {
 
     this.channels.control = this.pc.createDataChannel('control', { ordered: true });
     this.bindDataChannel('control', this.channels.control);
+
+    // Dedicated high-frequency unordered channel for zero-latency mouse movements
+    this.channels.mouse = this.pc.createDataChannel('mouse', { ordered: false, maxRetransmits: 0 });
+    this.bindDataChannel('mouse', this.channels.mouse);
 
     this.channels.file = this.pc.createDataChannel('file', { ordered: true });
     this.channels.file.binaryType = 'arraybuffer';

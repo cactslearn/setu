@@ -321,11 +321,11 @@ async fn execute_input(
                 let diff_x = (current_loc.0 - last_sim.0).abs();
                 let diff_y = (current_loc.1 - last_sim.1).abs();
 
-                if diff_x > 15 || diff_y > 15 {
+                if diff_x > 45 || diff_y > 45 {
                     // Physical host mouse moved: activate supremacy override
-                    println!("[Host Supremacy] Physical mouse activity detected. Suppressing remote commands for 2.0s");
+                    println!("[Host Supremacy] Physical mouse activity detected. Suppressing remote commands for 500ms");
                     let mut override_lock = state.override_until.lock().await;
-                    *override_lock = Some(Instant::now() + Duration::from_millis(2000));
+                    *override_lock = Some(Instant::now() + Duration::from_millis(500));
                     return;
                 }
 

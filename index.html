@@ -190,6 +190,16 @@
         </svg>
       </button>
 
+      <!-- Schedule Room & Calendar Button -->
+      <button id="openScheduleBtn" class="tool-icon-btn" title="Schedule Room &amp; Calendar" aria-label="Schedule room and calendar">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+          <line x1="16" y1="2" x2="16" y2="6"></line>
+          <line x1="8" y1="2" x2="8" y2="6"></line>
+          <line x1="3" y1="10" x2="21" y2="10"></line>
+        </svg>
+      </button>
+
       <!-- Permanent Reusable QR Card Button -->
       <button id="openPermanentQrBtn" class="tool-icon-btn" title="My Reusable Identity Card &amp; QR" aria-label="Reusable identity card">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -270,6 +280,10 @@
 
         <!-- Quick Action Shortcuts -->
         <div class="welcome-shortcuts-row">
+          <button id="welcomeScheduleBtn" class="btn btn-secondary btn-sm" style="display: flex; align-items: center; gap: 0.4rem;">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+            <span>Schedule Room</span>
+          </button>
           <button id="welcomeHistoryBtn" class="btn btn-secondary btn-sm" style="display: flex; align-items: center; gap: 0.4rem;">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
             <span>Meeting History</span>
@@ -654,6 +668,16 @@
                   <td><span class="chip-avail">$0 / Free OSS</span><span class="comp-subtext">Host your own server</span></td>
                   <td><span class="chip-limit">Commercial Tiers</span><span class="comp-subtext">Paid subscriptions</span></td>
                   <td><span class="chip-limit">Commercial Tiers</span><span class="comp-subtext">Paid subscriptions</span></td>
+                </tr>
+                <tr>
+                  <th scope="row" class="comp-feature-col">Room Scheduling &amp; Calendar Invites</th>
+                  <td class="col-setu"><span class="chip-avail">Zero-Cloud RFC 5545</span><span class="comp-subtext">IndexedDB, .ics export/import, Google &amp; Outlook deep links, mailto</span></td>
+                  <td><span class="chip-limit">Google Account</span><span class="comp-subtext">Google Calendar locked</span></td>
+                  <td><span class="chip-limit">Zoom Account</span><span class="comp-subtext">Requires cloud schedule</span></td>
+                  <td><span class="chip-limit">M365 Account</span><span class="comp-subtext">Exchange / Outlook locked</span></td>
+                  <td><span class="chip-none">None</span><span class="comp-subtext">Ad-hoc rooms only</span></td>
+                  <td><span class="chip-none">None</span><span class="comp-subtext">Ad-hoc links only</span></td>
+                  <td><span class="chip-limit">Proprietary</span><span class="comp-subtext">Vendor account needed</span></td>
                 </tr>
               </tbody>
             </table>
@@ -1806,6 +1830,197 @@
     </div>
   </div>
 
+  <!-- Room Scheduling & Calendar Modal -->
+  <div id="scheduleModal" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="scheduleModalTitle">
+    <div class="dialog-card" style="max-width: 680px; max-height: 88vh; display: flex; flex-direction: column;">
+      <div class="dialog-header">
+        <strong id="scheduleModalTitle">Schedule Room &amp; Calendar Invitations</strong>
+        <button id="closeScheduleModalBtn" class="tool-icon-btn" style="width: 28px; height: 28px;" aria-label="Close scheduler">✕</button>
+      </div>
+
+      <!-- Navigation Tabs (Pinned edge-to-edge above scrollable body) -->
+      <nav class="schedule-nav-tabs" role="tablist" aria-label="Scheduler navigation tabs">
+        <button id="schedTabCreateBtn" class="schedule-nav-tab active" role="tab" aria-selected="true" type="button">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+          <span>Schedule Room</span>
+        </button>
+        <button id="schedTabCalendarBtn" class="schedule-nav-tab" role="tab" aria-selected="false" type="button">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line><circle cx="8" cy="15" r="1"></circle><circle cx="12" cy="15" r="1"></circle><circle cx="16" cy="15" r="1"></circle></svg>
+          <span>Calendar &amp; Availability</span>
+        </button>
+        <button id="schedTabUpcomingBtn" class="schedule-nav-tab" role="tab" aria-selected="false" type="button">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+          <span>Upcoming</span>
+          <span class="sched-tab-badge" id="schedUpcomingCountBadge">0</span>
+        </button>
+        <button id="schedTabMissedBtn" class="schedule-nav-tab" role="tab" aria-selected="false" type="button">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+          <span>Missed Events</span>
+          <span class="sched-tab-badge" id="schedMissedCountBadge">0</span>
+        </button>
+        <button id="schedTabImportBtn" class="schedule-nav-tab" role="tab" aria-selected="false" type="button">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+          <span>Import .ics</span>
+        </button>
+      </nav>
+
+      <div class="dialog-body" style="overflow-y: auto; flex: 1; padding: 1.25rem;">
+        
+        <!-- View 1: Schedule Room -->
+        <div id="schedViewCreate">
+          <div style="display: flex; flex-direction: column; gap: 0.85rem;">
+            <div class="form-field-group">
+              <label class="form-label" for="schedTitle">Meeting Title / Topic</label>
+              <input type="text" id="schedTitle" class="select-input" placeholder="e.g. Project Architecture Sync" maxlength="120">
+            </div>
+
+            <div class="sched-form-grid-3">
+              <!-- Date Field with Calendar Icon -->
+              <div class="form-field-group">
+                <label class="form-label" for="schedDate">Date</label>
+                <div class="sched-input-with-icon">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="sched-field-icon"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+                  <input type="date" id="schedDate" class="select-input sched-date-input" aria-label="Meeting Date">
+                </div>
+              </div>
+
+              <!-- Start Time with Clock Icon -->
+              <div class="form-field-group">
+                <label class="form-label" for="schedTime">Start Time</label>
+                <div class="sched-input-with-icon">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="sched-field-icon"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+                  <input type="time" id="schedTime" class="select-input sched-time-input" aria-label="Start Time">
+                </div>
+              </div>
+
+              <!-- Duration Field -->
+              <div class="form-field-group">
+                <label class="form-label" for="schedDuration">Duration</label>
+                <select id="schedDuration" class="select-input">
+                  <option value="15">15 minutes</option>
+                  <option value="30" selected>30 minutes</option>
+                  <option value="45">45 minutes</option>
+                  <option value="60">1 hour</option>
+                  <option value="90">1.5 hours</option>
+                  <option value="120">2 hours</option>
+                </select>
+              </div>
+            </div>
+
+            <!-- Real-time Overlap Conflict Alert Banner -->
+            <div id="schedConflictAlert" class="sched-conflict-alert" style="display: none;">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+              <span id="schedConflictAlertText">Time slot conflicts with another meeting. Please select a non-overlapping time.</span>
+            </div>
+
+            <div class="form-field-group">
+              <label class="form-label" for="schedRoomCode">Room Code</label>
+              <div class="sched-room-code-wrapper">
+                <input type="text" id="schedRoomCode" class="select-input" placeholder="SETU-XXXX-XXXX" style="font-family: var(--font-mono); text-transform: uppercase;">
+                <button id="schedGenerateCodeBtn" class="btn btn-secondary btn-sm" type="button" style="white-space: nowrap;">Generate New</button>
+                <button id="schedUseMyRoomBtn" class="btn btn-secondary btn-sm" type="button" style="white-space: nowrap;">Use My Room</button>
+              </div>
+              <span style="font-size: 0.725rem; color: var(--text-muted); margin-top: 0.2rem;">
+                Peer connects instantly via this room code or direct link. Zero server-side registration needed.
+              </span>
+            </div>
+
+            <div class="form-field-group">
+              <label class="form-label" for="schedNotes">Agenda / Description (Optional)</label>
+              <textarea id="schedNotes" class="select-input text-area-box" rows="2" placeholder="Add meeting objective, talking points, or instructions..."></textarea>
+            </div>
+
+            <!-- Export & Share Actions Grid -->
+            <div style="margin-top: 0.6rem; padding-top: 0.85rem; border-top: 1px solid var(--border-subtle);">
+              <span style="display: block; font-size: 0.775rem; font-weight: 600; color: var(--text-secondary); margin-bottom: 0.5rem;">
+                Save &amp; Export Invitations
+              </span>
+              <div class="sched-actions-grid">
+                <button id="schedSaveAndIcsBtn" class="btn btn-primary btn-sm" type="button">
+                  Save &amp; Export .ics
+                </button>
+                <button id="schedGoogleCalBtn" class="btn btn-secondary btn-sm" type="button">
+                  Google Calendar
+                </button>
+                <button id="schedOutlookCalBtn" class="btn btn-secondary btn-sm" type="button">
+                  Outlook Web
+                </button>
+                <button id="schedEmailInviteBtn" class="btn btn-secondary btn-sm" type="button">
+                  Email Invite
+                </button>
+                <button id="schedCopyInviteBtn" class="btn btn-secondary btn-sm" type="button">
+                  Copy Text
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- View 2: Interactive Calendar & Availability -->
+        <div id="schedViewCalendar" style="display: none;">
+          <div class="sched-cal-container">
+            <div class="sched-cal-header">
+              <span id="schedCalMonthTitle" class="sched-cal-month-title">Month Year</span>
+              <div class="sched-cal-nav-group">
+                <button id="schedCalPrevBtn" class="sched-cal-nav-btn" type="button" title="Previous Month">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"></polyline></svg>
+                  <span>Prev</span>
+                </button>
+                <button id="schedCalTodayBtn" class="sched-cal-nav-btn" type="button" title="Go to Current Month">Today</button>
+                <button id="schedCalNextBtn" class="sched-cal-nav-btn" type="button" title="Next Month">
+                  <span>Next</span>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"></polyline></svg>
+                </button>
+              </div>
+            </div>
+
+            <div class="sched-cal-weekdays">
+              <span>Sun</span><span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span>
+            </div>
+
+            <div id="schedCalDaysGrid" class="sched-cal-grid">
+              <!-- Rendered dynamically -->
+            </div>
+
+            <div id="schedCalDayDetail" class="sched-cal-day-detail">
+              <!-- Rendered dynamically -->
+            </div>
+          </div>
+        </div>
+
+        <!-- View 3: Upcoming Scheduled Meetings -->
+        <div id="schedViewUpcoming" style="display: none;">
+          <div id="schedUpcomingList" style="display: flex; flex-direction: column; gap: 0.75rem;">
+            <!-- Rendered dynamically -->
+          </div>
+        </div>
+
+        <!-- View 4: Missed / Past Events -->
+        <div id="schedViewMissed" style="display: none;">
+          <div id="schedMissedList" style="display: flex; flex-direction: column; gap: 0.75rem;">
+            <!-- Rendered dynamically with Reschedule buttons -->
+          </div>
+        </div>
+
+        <!-- View 5: Import .ics Calendar File -->
+        <div id="schedViewImport" style="display: none;">
+          <input type="file" id="schedIcsFileInput" accept=".ics,text/calendar" style="display: none;">
+          <div id="schedIcsDropzone" class="sched-dropzone">
+            <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="var(--accent-blue)" stroke-width="2" style="margin-bottom: 0.75rem;">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+              <polyline points="7 10 12 15 17 10"></polyline>
+              <line x1="12" y1="15" x2="12" y2="3"></line>
+            </svg>
+            <div style="font-weight: 600; font-size: 0.95rem; margin-bottom: 0.25rem;">Drag &amp; Drop .ics Calendar File Here</div>
+            <div style="font-size: 0.775rem; color: var(--text-muted); margin-bottom: 0.75rem;">Supports standard RFC 5545 iCalendar files from Google Calendar, Outlook, Apple Calendar, and Zoom</div>
+            <button class="btn btn-secondary btn-sm" type="button">Browse Local File</button>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
   <!-- Meeting History & Transcripts Modal -->
   <div id="historyModal" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="historyModalTitle">
     <div class="dialog-card" style="max-width: 680px; max-height: 85vh; display: flex; flex-direction: column;">
@@ -1883,6 +2098,7 @@
             <tbody>
               <tr style="border-bottom: 1px solid var(--border-subtle);"><td style="padding: 0.4rem 0;">Stored Chat Messages</td><td id="auditMsgCount" style="text-align: right; font-weight: 600;">0</td></tr>
               <tr style="border-bottom: 1px solid var(--border-subtle);"><td style="padding: 0.4rem 0;">Saved Verified Contacts</td><td id="auditContactCount" style="text-align: right; font-weight: 600;">0</td></tr>
+              <tr style="border-bottom: 1px solid var(--border-subtle);"><td style="padding: 0.4rem 0;">Scheduled Rooms</td><td id="auditScheduleCount" style="text-align: right; font-weight: 600;">0</td></tr>
               <tr style="border-bottom: 1px solid var(--border-subtle);"><td style="padding: 0.4rem 0;">Estimated Storage Size</td><td id="auditSizeEst" style="text-align: right; font-weight: 600;">0 KB</td></tr>
               <tr><td style="padding: 0.4rem 0;">Telemetry &amp; Trackers</td><td style="text-align: right; font-weight: 600; color: #34a853;">Strictly Zero</td></tr>
             </tbody>
@@ -1920,6 +2136,7 @@
   <script defer src="assets/js/meeting.js"></script>
   <script defer src="assets/js/remote-control.js"></script>
   <script defer src="assets/js/device-test.js"></script>
+  <script defer src="assets/js/schedule.js"></script>
   <script defer src="assets/js/app.js"></script>
 </body>
 </html>

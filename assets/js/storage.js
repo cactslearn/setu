@@ -7,7 +7,7 @@
 class StorageEngine {
   constructor() {
     this.dbName = 'SetuP2P_Storage';
-    this.dbVersion = 3;
+    this.dbVersion = 4;
     this.db = null;
     this.cryptoKey = null; // Derived AES-GCM key if encryption is unlocked
   }
@@ -33,6 +33,11 @@ class StorageEngine {
       histStore.createIndex('timestamp', 'timestamp', { unique: false });
       histStore.createIndex('peerName', 'peerName', { unique: false });
     }
+    if (!db.objectStoreNames.contains('schedules')) {
+      const schedStore = db.createObjectStore('schedules', { keyPath: 'id' });
+      schedStore.createIndex('startTime', 'startTime', { unique: false });
+      schedStore.createIndex('roomCode', 'roomCode', { unique: false });
+    }
   }
 
   async init() {
@@ -49,7 +54,7 @@ class StorageEngine {
           this.db = event.target.result;
           
           // Self-healing check: verify all required stores exist
-          const required = ['messages', 'contacts', 'notes', 'settings', 'history'];
+          const required = ['messages', 'contacts', 'notes', 'settings', 'history', 'schedules'];
           const missing = required.filter(s => !this.db.objectStoreNames.contains(s));
           if (missing.length > 0) {
             console.warn('[Storage] Missing stores detected (' + missing.join(', ') + '). Performing self-healing upgrade...');
@@ -563,18 +568,173 @@ class StorageEngine {
     }
   }
 
+  // --- Scheduled Meetings Store ---
+  _getFallbackSchedules() {
+    try {
+      const raw = localStorage.getItem('setu_schedules_fallback');
+      return raw ? JSON.parse(raw) : [];
+    } catch (e) {
+      return [];
+    }
+  }
+
+  _saveFallbackSchedules(list) {
+    try {
+      localStorage.setItem('setu_schedules_fallback', JSON.stringify(list));
+    } catch (e) {}
+  }
+
+  async saveSchedule(schedule) {
+    if (!schedule) return null;
+    const item = {
+      id: schedule.id || 'sched_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5),
+      title: (schedule.title || 'Setu Meeting').trim(),
+      roomCode: (schedule.roomCode || '').trim(),
+      startTime: schedule.startTime || new Date().toISOString(),
+      durationMinutes: parseInt(schedule.durationMinutes, 10) || 30,
+      notes: (schedule.notes || '').trim(),
+      location: schedule.location || '',
+      createdAt: schedule.createdAt || new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    };
+
+    // 1. Fallback sync
+    try {
+      const current = this._getFallbackSchedules().filter(s => s.id !== item.id);
+      current.push(item);
+      current.sort((a, b) => new Date(a.startTime) - new Date(b.startTime));
+      this._saveFallbackSchedules(current);
+    } catch (e) {}
+
+    // 2. Save in IndexedDB
+    try {
+      await this.init();
+      if (this.db && this.db.objectStoreNames.contains('schedules')) {
+        await new Promise((resolve, reject) => {
+          const tx = this.db.transaction('schedules', 'readwrite');
+          const store = tx.objectStore('schedules');
+          const req = store.put(item);
+          req.onsuccess = () => resolve(true);
+          req.onerror = () => reject(req.error);
+        });
+      }
+    } catch (e) {
+      console.warn('[Storage] Error saving schedule to IndexedDB:', e);
+    }
+
+    return item;
+  }
+
+  async getAllSchedules() {
+    let items = [];
+    try {
+      await this.init();
+      if (this.db && this.db.objectStoreNames.contains('schedules')) {
+        items = await new Promise((resolve, reject) => {
+          const tx = this.db.transaction('schedules', 'readonly');
+          const store = tx.objectStore('schedules');
+          const req = store.getAll();
+          req.onsuccess = () => resolve(req.result || []);
+          req.onerror = () => reject(req.error);
+        });
+      }
+    } catch (e) {
+      console.warn('[Storage] Error fetching schedules from IndexedDB:', e);
+    }
+
+    if (!items || items.length === 0) {
+      items = this._getFallbackSchedules();
+    }
+
+    // Sort chronologically ascending
+    items.sort((a, b) => new Date(a.startTime) - new Date(b.startTime));
+    return items;
+  }
+
+  async getSchedule(id) {
+    if (!id) return null;
+    try {
+      await this.init();
+      if (this.db && this.db.objectStoreNames.contains('schedules')) {
+        const item = await new Promise((resolve, reject) => {
+          const tx = this.db.transaction('schedules', 'readonly');
+          const store = tx.objectStore('schedules');
+          const req = store.get(id);
+          req.onsuccess = () => resolve(req.result || null);
+          req.onerror = () => reject(req.error);
+        });
+        if (item) return item;
+      }
+    } catch (e) {
+      console.warn('[Storage] Error reading schedule from IndexedDB:', e);
+    }
+
+    const fallbackList = this._getFallbackSchedules();
+    return fallbackList.find(s => s.id === id) || null;
+  }
+
+  async deleteSchedule(id) {
+    if (!id) return false;
+    // 1. Fallback update
+    try {
+      const filtered = this._getFallbackSchedules().filter(s => s.id !== id);
+      this._saveFallbackSchedules(filtered);
+    } catch (e) {}
+
+    // 2. Remove from IndexedDB
+    try {
+      await this.init();
+      if (this.db && this.db.objectStoreNames.contains('schedules')) {
+        await new Promise((resolve, reject) => {
+          const tx = this.db.transaction('schedules', 'readwrite');
+          const store = tx.objectStore('schedules');
+          const req = store.delete(id);
+          req.onsuccess = () => resolve(true);
+          req.onerror = () => reject(req.error);
+        });
+      }
+    } catch (e) {
+      console.warn('[Storage] Error deleting schedule from IndexedDB:', e);
+    }
+    return true;
+  }
+
+  async clearAllSchedules() {
+    try {
+      localStorage.removeItem('setu_schedules_fallback');
+    } catch (e) {}
+
+    try {
+      await this.init();
+      if (this.db && this.db.objectStoreNames.contains('schedules')) {
+        await new Promise((resolve, reject) => {
+          const tx = this.db.transaction('schedules', 'readwrite');
+          const store = tx.objectStore('schedules');
+          const req = store.clear();
+          req.onsuccess = () => resolve(true);
+          req.onerror = () => reject(req.error);
+        });
+      }
+    } catch (e) {
+      console.warn('[Storage] Error clearing schedules from IndexedDB:', e);
+    }
+    return true;
+  }
+
   // --- Export and Panic Wipe ---
   async exportAllData() {
     const messages = await this.getMessages();
     const contacts = await this.getContacts();
     const meetings = await this.getAllMeetings();
+    const schedules = await this.getAllSchedules();
     return {
       appName: 'Setu P2P',
-      version: '1.0.0',
+      version: '1.1.0',
       exportedAt: new Date().toISOString(),
       messages,
       contacts,
-      meetings
+      meetings,
+      schedules
     };
   }
 

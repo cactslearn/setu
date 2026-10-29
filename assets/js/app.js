@@ -35,6 +35,9 @@ document.addEventListener('DOMContentLoaded', async () => {
   window.setuWizard.init();
   window.setuMeeting.init();
   window.setuChat.init(document.getElementById('chatMessagesContainer'));
+  if (window.setuSchedule) {
+    window.setuSchedule.init();
+  }
 
   const canvasEl = document.getElementById('whiteboardCanvas');
   const notepadEl = document.getElementById('sharedNotepadText');
@@ -673,6 +676,8 @@ document.addEventListener('DOMContentLoaded', async () => {
       const audit = await window.setuPrivacy.getStorageAudit();
       document.getElementById('auditMsgCount').textContent = audit.totalMessages;
       document.getElementById('auditContactCount').textContent = audit.totalContacts;
+      const schedEl = document.getElementById('auditScheduleCount');
+      if (schedEl) schedEl.textContent = audit.totalSchedules || 0;
       document.getElementById('auditSizeEst').textContent = `${audit.estimatedSizeKb} KB`;
       privacyModal.classList.add('open');
     });
@@ -1474,17 +1479,39 @@ document.addEventListener('DOMContentLoaded', async () => {
     a.click();
   });
 
-  // 19. 1-Click URL Hash Auto-Join (#room=... or #join=...)
+  // 19. 1-Click URL Hash & Query Auto-Join (#apiRoom=..., #room=..., #join=..., ?apiRoom=..., ?room=...)
   async function checkUrlJoinHash() {
     const hash = window.location.hash || '';
-    if (hash.startsWith('#room=')) {
+    const search = window.location.search || '';
+    const searchParams = new URLSearchParams(search);
+
+    if (hash.startsWith('#apiRoom=') || searchParams.has('apiRoom')) {
       try {
-        const roomCode = hash.substring(6).trim();
-        if (roomCode && window.setuWizard) {
-          await window.setuWizard.smartRoomEntry(roomCode);
+        const params = hash.startsWith('#apiRoom=')
+          ? new URLSearchParams(hash.substring(1))
+          : searchParams;
+        const roomCode = params.get('apiRoom');
+        const endpoint = params.get('api');
+        if (roomCode && endpoint && window.setuWizard && window.setuWizard.joinApiMeeting) {
+          await window.setuWizard.joinApiMeeting(roomCode, endpoint);
+          return;
         }
       } catch (e) {
-        console.warn('Failed to parse #room= hash:', e);
+        console.warn('Failed to parse apiRoom parameter:', e);
+      }
+    }
+
+    if (hash.startsWith('#room=') || searchParams.has('room')) {
+      try {
+        const roomCode = hash.startsWith('#room=')
+          ? hash.substring(6).trim()
+          : (searchParams.get('room') || '').trim();
+        if (roomCode && window.setuWizard) {
+          await window.setuWizard.smartRoomEntry(roomCode);
+          return;
+        }
+      } catch (e) {
+        console.warn('Failed to parse room parameter:', e);
       }
     } else if (hash.startsWith('#join=')) {
       try {
@@ -1497,17 +1524,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
       } catch (e) {
         console.warn('Failed to parse #join= hash:', e);
-      }
-    } else if (hash.startsWith('#apiRoom=')) {
-      try {
-        const params = new URLSearchParams(hash.substring(1));
-        const roomCode = params.get('apiRoom');
-        const endpoint = params.get('api');
-        if (roomCode && endpoint && window.setuWizard && window.setuWizard.joinApiMeeting) {
-          await window.setuWizard.joinApiMeeting(roomCode, endpoint);
-        }
-      } catch (e) {
-        console.warn('Failed to parse #apiRoom= hash:', e);
       }
     }
   }

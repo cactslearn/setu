@@ -22,6 +22,7 @@
 - **Shared Collaborative Workspace:** Synchronized drawing whiteboard and collaborative scratchpad with explicit host-controlled permissions and instant revoke.
 - **Live Diagnostics & Network Health:** Continuous real-time monitor for round-trip latency (RTT), packet loss percentage, resolution, framerate, and candidate topology.
 - **Privacy & Storage Management Console:** Real-time data audit, configurable auto-retention pruning, and one-click Panic Wipe to permanently erase all local storage.
+- **Client-Side Room Scheduling & Calendar Integrations:** 100% private, serverless meeting scheduler stored locally in IndexedDB. Generate and parse standard RFC 5545 iCalendar (`.ics`) invitations, generate 1-click Google Calendar & Microsoft Outlook deep links, compose pre-filled email invites, and manage upcoming calls with zero accounts.
 
 ---
 
@@ -36,6 +37,7 @@ setu/
 │   └── js/
 │       ├── app.js              # Coordinator, message dispatcher & shortcuts
 │       ├── storage.js          # IndexedDB engine with AES-GCM encryption
+│       ├── schedule.js         # RFC 5545 calendar (.ics), deep links & scheduler
 │       ├── sound.js            # Synthesized Web Audio notification engine
 │       ├── signaling.js        # Non-trickle ICE payload packaging & validation
 │       ├── room-signaling.js   # 8-character room codes & automated API probing
@@ -57,6 +59,7 @@ setu/
 ├── docs/
 │   ├── ARCHITECTURE.md         # Deep-dive system architecture & data flows
 │   ├── REMOTE_CONTROL.md       # Remote control architecture, security & setup
+│   ├── ROOM_SCHEDULING.md      # Client-side room scheduling & calendar sync
 │   ├── PRIVACY.md              # Local storage, WebRTC traffic & metadata
 │   ├── DISCLAIMER.md           # As-is warranty & liability limitations
 │   ├── DEPLOYMENT.md           # Static deployment guide (GitHub Pages)

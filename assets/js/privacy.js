@@ -10,15 +10,17 @@ class PrivacyConsole {
   }
 
   async getStorageAudit() {
-    if (!window.setuStorage) return { messages: 0, contacts: 0 };
+    if (!window.setuStorage) return { messages: 0, contacts: 0, schedules: 0 };
     const messages = await window.setuStorage.getMessages();
     const contacts = await window.setuStorage.getContacts();
+    const schedules = window.setuStorage.getAllSchedules ? await window.setuStorage.getAllSchedules() : [];
 
     return {
       totalMessages: messages.length,
       totalContacts: contacts.length,
+      totalSchedules: schedules.length,
       encryptedMessages: messages.filter(m => m.isEncrypted).length,
-      estimatedSizeKb: Math.round(JSON.stringify(messages).length / 1024)
+      estimatedSizeKb: Math.round((JSON.stringify(messages).length + JSON.stringify(schedules).length) / 1024)
     };
   }
 

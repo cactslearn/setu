@@ -85,6 +85,25 @@ class RoomSignalingService {
   }
 
   /**
+   * Retrieves or initializes the user's permanent personal room code.
+   */
+  async getPersonalRoomCode() {
+    if (window.setuStorage && typeof window.setuStorage.getOrCreatePersonalRoomCode === 'function') {
+      const code = await window.setuStorage.getOrCreatePersonalRoomCode();
+      return this.formatRoomCode(code);
+    }
+    const badge = document.getElementById('welcomePersonalCodeBadge');
+    if (badge && badge.textContent && badge.textContent !== '...') {
+      return badge.textContent.trim();
+    }
+    const input = document.getElementById('settingPersonalRoomCode');
+    if (input && input.value) {
+      return input.value.trim();
+    }
+    return '';
+  }
+
+  /**
    * Derives an AES-GCM 256-bit CryptoKey from a room code.
    */
   async deriveKey(roomCode) {

@@ -1525,6 +1525,12 @@ document.addEventListener('DOMContentLoaded', async () => {
       } catch (e) {
         console.warn('Failed to parse #join= hash:', e);
       }
+    } else if (hash === '#host' || searchParams.has('host')) {
+      document.getElementById('startInstantCallBtn')?.click();
+    } else if (hash === '#schedule' || searchParams.has('schedule')) {
+      if (window.setuSchedule && typeof window.setuSchedule.openModal === 'function') {
+        window.setuSchedule.openModal();
+      }
     }
   }
 
@@ -1547,7 +1553,137 @@ document.addEventListener('DOMContentLoaded', async () => {
       closeSettings();
       if (historyModal) historyModal.classList.remove('open');
       if (permanentQrModal) permanentQrModal.classList.remove('open');
+      closeHeaderDropdownMenu();
     }
+  });
+
+  // 21. Progressive Web App (PWA) Registration & Install Flow
+  let deferredInstallPrompt = null;
+  const pwaInstallBtn = document.getElementById('pwaInstallBtn');
+  const welcomeInstallPwaBtn = document.getElementById('welcomeInstallPwaBtn');
+
+  function updateInstallButtonsVisibility(show) {
+    const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+    const shouldDisplay = show && !isStandalone;
+
+    if (pwaInstallBtn) {
+      pwaInstallBtn.style.display = shouldDisplay ? 'inline-flex' : 'none';
+    }
+    if (welcomeInstallPwaBtn) {
+      welcomeInstallPwaBtn.style.display = shouldDisplay ? 'inline-flex' : 'none';
+    }
+    const mobileMenuInstallBtn = document.getElementById('mobileMenuInstallBtn');
+    if (mobileMenuInstallBtn) {
+      mobileMenuInstallBtn.style.display = shouldDisplay ? 'flex' : 'none';
+    }
+  }
+
+  window.addEventListener('beforeinstallprompt', (e) => {
+    e.preventDefault();
+    deferredInstallPrompt = e;
+    updateInstallButtonsVisibility(true);
+  });
+
+  async function triggerPwaInstall() {
+    if (!deferredInstallPrompt) return;
+    deferredInstallPrompt.prompt();
+    try {
+      const choice = await deferredInstallPrompt.userChoice;
+      if (choice && choice.outcome === 'accepted') {
+        if (window.showToast) window.showToast('Installing Setu P2P...');
+      }
+    } catch (_) {}
+    deferredInstallPrompt = null;
+    updateInstallButtonsVisibility(false);
+  }
+
+  pwaInstallBtn?.addEventListener('click', triggerPwaInstall);
+  welcomeInstallPwaBtn?.addEventListener('click', triggerPwaInstall);
+
+  window.addEventListener('appinstalled', () => {
+    deferredInstallPrompt = null;
+    updateInstallButtonsVisibility(false);
+    if (window.showToast) window.showToast('Setu P2P installed successfully');
+  });
+
+  // Service Worker Registration for offline caching and PWA installation
+  if ('serviceWorker' in navigator && (window.location.protocol === 'https:' || window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker
+        .register('./sw.js')
+        .then((reg) => {
+          console.log('[PWA] Service Worker registered. Scope:', reg.scope);
+        })
+        .catch((err) => {
+          console.warn('[PWA] Service Worker registration note:', err);
+        });
+    });
+  }
+
+  // 22. Mobile Header Hamburger Menu & Action Routing
+  const headerMenuToggleBtn = document.getElementById('headerMenuToggleBtn');
+  const headerDropdownMenu = document.getElementById('headerDropdownMenu');
+
+  function closeHeaderDropdownMenu() {
+    if (headerDropdownMenu && headerDropdownMenu.classList.contains('open')) {
+      headerDropdownMenu.classList.remove('open');
+      headerMenuToggleBtn?.setAttribute('aria-expanded', 'false');
+    }
+  }
+
+  function toggleHeaderDropdownMenu(e) {
+    if (e) e.stopPropagation();
+    if (!headerDropdownMenu) return;
+    const willOpen = !headerDropdownMenu.classList.contains('open');
+    headerDropdownMenu.classList.toggle('open', willOpen);
+    headerMenuToggleBtn?.setAttribute('aria-expanded', willOpen ? 'true' : 'false');
+  }
+
+  headerMenuToggleBtn?.addEventListener('click', toggleHeaderDropdownMenu);
+
+  document.addEventListener('click', (e) => {
+    if (headerDropdownMenu && !headerDropdownMenu.contains(e.target) && !headerMenuToggleBtn?.contains(e.target)) {
+      closeHeaderDropdownMenu();
+    }
+  });
+
+  document.getElementById('mobileMenuScheduleBtn')?.addEventListener('click', () => {
+    closeHeaderDropdownMenu();
+    if (window.setuSchedule && typeof window.setuSchedule.openModal === 'function') {
+      window.setuSchedule.openModal();
+    } else {
+      document.getElementById('openScheduleBtn')?.click();
+    }
+  });
+
+  document.getElementById('mobileMenuHistoryBtn')?.addEventListener('click', () => {
+    closeHeaderDropdownMenu();
+    openHistory();
+  });
+
+  document.getElementById('mobileMenuPermQrBtn')?.addEventListener('click', () => {
+    closeHeaderDropdownMenu();
+    openPermanentQr();
+  });
+
+  document.getElementById('mobileMenuSettingsBtn')?.addEventListener('click', () => {
+    closeHeaderDropdownMenu();
+    openSettings('general');
+  });
+
+  document.getElementById('mobileMenuPrivacyBtn')?.addEventListener('click', () => {
+    closeHeaderDropdownMenu();
+    document.getElementById('privacyCenterBtn')?.click();
+  });
+
+  document.getElementById('mobileMenuThemeBtn')?.addEventListener('click', () => {
+    closeHeaderDropdownMenu();
+    document.getElementById('themeToggleBtn')?.click();
+  });
+
+  document.getElementById('mobileMenuInstallBtn')?.addEventListener('click', () => {
+    closeHeaderDropdownMenu();
+    triggerPwaInstall();
   });
 
   console.log('[Setu P2P] Platform ready.');

@@ -3916,3 +3916,103 @@ html {
 .sched-reschedule-btn:hover {
   opacity: 0.9;
 }
+
+/* Progressive Web App (PWA) Install Button Styling */
+#pwaInstallBtn {
+  border-color: rgba(26, 115, 232, 0.4);
+  color: var(--accent-blue);
+}
+
+#pwaInstallBtn:hover {
+  background: rgba(26, 115, 232, 0.15);
+  border-color: var(--accent-blue);
+  color: var(--accent-blue);
+}
+
+/* ========================================================== */
+/* Header Navigation & Mobile Hamburger Menu                  */
+/* ========================================================== */
+.header-tools-desktop {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.header-mobile-menu-wrapper {
+  display: none;
+  position: relative;
+}
+
+.header-hamburger-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.header-dropdown-menu {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  width: 220px;
+  background: var(--bg-surface-elevated);
+  border: 1px solid var(--border-bright);
+  border-radius: var(--radius-md);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.55);
+  padding: 0.4rem;
+  display: none;
+  flex-direction: column;
+  gap: 0.2rem;
+  z-index: 1000;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+.header-dropdown-menu.open {
+  display: flex;
+}
+
+.header-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  padding: 0.55rem 0.75rem;
+  font-size: 0.825rem;
+  font-weight: 500;
+  color: var(--text-main);
+  background: none;
+  border: none;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  width: 100%;
+  text-align: left;
+  transition: all 0.12s ease;
+  box-sizing: border-box;
+}
+
+.header-menu-item svg {
+  flex-shrink: 0;
+  color: var(--accent-blue);
+}
+
+.header-menu-item:hover,
+.header-menu-item:focus-visible {
+  background: var(--bg-surface-hover);
+  color: var(--text-main);
+  outline: none;
+}
+
+.header-menu-divider {
+  height: 1px;
+  background: var(--border-subtle);
+  margin: 0.25rem 0;
+}
+
+@media (max-width: 768px) {
+  .header-tools-desktop {
+    display: none !important;
+  }
+
+  .header-mobile-menu-wrapper {
+    display: block !important;
+  }
+}

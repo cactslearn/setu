@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 192 192" width="192" height="192">
+  <!-- Brand Logo Container: #1a73e8 with rounded corners matching brand-logo-icon -->
+  <rect width="192" height="192" rx="60" fill="#1a73e8" />
+  
+  <!-- Brand Logo Icon: M4 11a9 9 0 0 1 9 9, M4 4a16 16 0 0 1 16 16, circle cx=5 cy=19 r=1 -->
+  <g transform="translate(36, 36) scale(5)" fill="none" stroke="#ffffff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M4 11a9 9 0 0 1 9 9" />
+    <path d="M4 4a16 16 0 0 1 16 16" />
+    <circle cx="5" cy="19" r="1" fill="#ffffff" />
+  </g>
+</svg>

@@ -1053,6 +1053,132 @@ class StorageEngine {
     } catch (e) {}
   }
 
+  // --- Settings Export & Import ---
+  async exportSettings() {
+    await this.init();
+    const userProfile = await this.getUserProfile();
+    const apiSignalingSettings = await this.getApiSignalingSettings();
+    const remoteControlSettings = await this.getRemoteControlSettings();
+    const syncSettings = await this.getSyncSettings();
+    const retentionPolicyDays = await this.getSetting('setu_retention_policy_days', 30);
+    const theme = (typeof localStorage !== 'undefined' ? localStorage.getItem('setu_theme') : null) || 'dark';
+
+    // Build portable settings bundle (excluding device-specific sync loopback IDs)
+    const exportableSync = {
+      enabled: !!syncSettings.enabled,
+      endpoint: syncSettings.endpoint || '',
+      accountId: syncSettings.accountId || '',
+      authToken: syncSettings.authToken || '',
+      masterPassphrase: syncSettings.masterPassphrase || '',
+      pollIntervalSec: syncSettings.pollIntervalSec || 15
+    };
+
+    return {
+      appName: 'Setu P2P',
+      format: 'setu_settings_export',
+      version: '1.2.0',
+      exportedAt: new Date().toISOString(),
+      settings: {
+        userProfile,
+        apiSignalingSettings,
+        remoteControlSettings,
+        syncSettings: exportableSync,
+        retentionPolicyDays,
+        theme
+      }
+    };
+  }
+
+  async importSettings(dataOrJsonString, preserveLocalDeviceId = true) {
+    await this.init();
+    let parsed = null;
+    if (typeof dataOrJsonString === 'string') {
+      try {
+        parsed = JSON.parse(dataOrJsonString);
+      } catch (e) {
+        throw new Error('Invalid JSON format. Please check the file or pasted text.');
+      }
+    } else if (typeof dataOrJsonString === 'object' && dataOrJsonString !== null) {
+      parsed = dataOrJsonString;
+    } else {
+      throw new Error('Invalid settings data provided');
+    }
+
+    // Unwrap if nested in container object
+    const root = parsed.settings || parsed;
+    if (!root || typeof root !== 'object') {
+      throw new Error('No valid settings found in the imported file.');
+    }
+
+    let importedCount = 0;
+
+    // 1. User Profile
+    if (root.userProfile && typeof root.userProfile === 'object') {
+      const current = await this.getUserProfile();
+      await this.saveUserProfile({ ...current, ...root.userProfile });
+      importedCount++;
+    }
+
+    // 2. Custom API Signaling Gateway
+    if (root.apiSignalingSettings && typeof root.apiSignalingSettings === 'object') {
+      await this.saveApiSignalingSettings(root.apiSignalingSettings);
+      importedCount++;
+    }
+
+    // 3. Remote Control & Companion
+    if (root.remoteControlSettings && typeof root.remoteControlSettings === 'object') {
+      await this.saveRemoteControlSettings(root.remoteControlSettings);
+      importedCount++;
+    }
+
+    // 4. Multi-Device Sync Settings
+    if (root.syncSettings && typeof root.syncSettings === 'object') {
+      const currentSync = await this.getSyncSettings();
+      const updatedSync = {
+        ...currentSync,
+        enabled: root.syncSettings.enabled !== undefined ? !!root.syncSettings.enabled : currentSync.enabled,
+        endpoint: root.syncSettings.endpoint !== undefined ? (root.syncSettings.endpoint || '').trim() : currentSync.endpoint,
+        accountId: root.syncSettings.accountId !== undefined ? (root.syncSettings.accountId || '').trim() : currentSync.accountId,
+        authToken: root.syncSettings.authToken !== undefined ? (root.syncSettings.authToken || '').trim() : currentSync.authToken,
+        masterPassphrase: root.syncSettings.masterPassphrase !== undefined ? (root.syncSettings.masterPassphrase || '').trim() : currentSync.masterPassphrase,
+        pollIntervalSec: parseInt(root.syncSettings.pollIntervalSec, 10) || currentSync.pollIntervalSec || 15
+      };
+
+      if (!preserveLocalDeviceId && root.syncSettings.deviceId) {
+        updatedSync.deviceId = root.syncSettings.deviceId;
+      }
+      await this.saveSyncSettings(updatedSync);
+      importedCount++;
+    }
+
+    // 5. Retention Policy
+    if (root.retentionPolicyDays !== undefined) {
+      const days = parseInt(root.retentionPolicyDays, 10);
+      if (!isNaN(days)) {
+        await this.setSetting('setu_retention_policy_days', days);
+        importedCount++;
+      }
+    }
+
+    // 6. Theme
+    if (root.theme && typeof localStorage !== 'undefined') {
+      localStorage.setItem('setu_theme', root.theme);
+      if (typeof document !== 'undefined' && document.documentElement) {
+        document.documentElement.setAttribute('data-theme', root.theme);
+      }
+      importedCount++;
+    }
+
+    if (importedCount === 0) {
+      throw new Error('No recognized configuration parameters found in imported file.');
+    }
+
+    return {
+      success: true,
+      importedCount
+    };
+  }
+
   // --- Export and Panic Wipe ---
   async exportAllData() {
     const messages = await this.getMessages();

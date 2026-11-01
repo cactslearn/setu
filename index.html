@@ -147,8 +147,8 @@
   </script>
 
   <!-- CSS Stylesheet -->
-  <link rel="preload" href="assets/css/app.css?v=13" as="style">
-  <link rel="stylesheet" href="assets/css/app.css?v=13">
+  <link rel="preload" href="assets/css/app.css?v=14" as="style">
+  <link rel="stylesheet" href="assets/css/app.css?v=14">
 </head>
 <body>
 
@@ -1542,6 +1542,10 @@
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>
           <span>Multi-Device Sync</span>
         </button>
+        <button class="settings-tab-btn" role="tab" aria-selected="false" data-tab="backup" id="settingsTabBtnBackup">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+          <span>Backup &amp; Transfer</span>
+        </button>
       </nav>
 
       <div class="dialog-body" style="overflow-y: auto; flex: 1;">
@@ -1972,11 +1976,86 @@
           </div>
         </div>
 
+        <!-- Tab 8: Backup & Transfer (Import / Export) -->
+        <div id="tab-backup" class="settings-tab-pane" role="tabpanel">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.4rem;">
+            <div style="font-weight: 700; font-size: 0.9rem; color: var(--text-main);">Backup &amp; Transfer Settings</div>
+            <span class="badge badge-secondary" style="font-size: 0.725rem;">Local &amp; Offline</span>
+          </div>
+          <div style="font-size: 0.75rem; color: var(--text-muted); margin-bottom: 1rem; line-height: 1.45;">
+            Export all your preferences, display name, permanent room code, gateway configurations, and sync credentials to a secure JSON file or clipboard text. Restore anytime after clearing browser data or transfer directly to another computer or mobile device.
+          </div>
+
+          <!-- Section: Export Settings -->
+          <div style="background: var(--bg-surface-elevated); border: 1px solid var(--border-subtle); border-radius: var(--radius-sm); padding: 1rem; margin-bottom: 1rem;">
+            <div style="font-weight: 600; font-size: 0.85rem; color: var(--text-main); margin-bottom: 0.35rem;">Export Settings</div>
+            <div style="font-size: 0.725rem; color: var(--text-muted); margin-bottom: 0.75rem;">
+              Save your current configurations to a file or copy them to your clipboard.
+            </div>
+            <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+              <button type="button" id="exportSettingsFileBtn" class="btn btn-primary btn-sm">
+                Download Settings Backup (.json)
+              </button>
+              <button type="button" id="copySettingsJsonBtn" class="btn btn-secondary btn-sm">
+                Copy JSON to Clipboard
+              </button>
+            </div>
+          </div>
+
+          <!-- Section: Import Settings -->
+          <div id="importSettingsDropZone" style="background: var(--bg-surface-elevated); border: 1px dashed var(--border-subtle); border-radius: var(--radius-sm); padding: 1rem; transition: border-color 0.2s, background-color 0.2s;">
+            <div style="font-weight: 600; font-size: 0.85rem; color: var(--text-main); margin-bottom: 0.35rem;">Import Settings</div>
+            <div style="font-size: 0.725rem; color: var(--text-muted); margin-bottom: 0.75rem;">
+              Restore settings from a downloaded backup file (drag &amp; drop supported) or paste your exported settings JSON directly.
+            </div>
+            <div style="display: flex; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 0.75rem;">
+              <input type="file" id="importSettingsFileInput" accept=".json,application/json" style="display: none;">
+              <button type="button" id="uploadSettingsFileBtn" class="btn btn-secondary btn-sm">
+                Choose Backup File (.json)
+              </button>
+              <button type="button" id="togglePasteSettingsAreaBtn" class="btn btn-secondary btn-sm">
+                Paste JSON Text
+              </button>
+            </div>
+
+            <!-- Paste Area (Collapsible) -->
+            <div id="pasteSettingsContainer" style="display: none; flex-direction: column; gap: 0.5rem; margin-top: 0.5rem;">
+              <textarea id="pasteSettingsJsonInput" class="text-area-box" style="height: 100px; font-family: var(--font-mono); font-size: 0.75rem;" placeholder="Paste your exported settings JSON here..."></textarea>
+              <div style="display: flex; justify-content: flex-end; gap: 0.5rem;">
+                <button type="button" id="applyPastedSettingsBtn" class="btn btn-primary btn-sm">Apply Pasted Settings</button>
+              </div>
+            </div>
+
+            <div id="importSettingsFeedback" style="font-size: 0.75rem; margin-top: 0.5rem; min-height: 1.2rem;"></div>
+          </div>
+
+          <!-- Included Parameters Breakdown -->
+          <div style="margin-top: 1rem; border-top: 1px solid var(--border-subtle); padding-top: 0.85rem;">
+            <div style="font-weight: 600; font-size: 0.775rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.5rem;">
+              What Is Included In The Settings Backup
+            </div>
+            <ul style="font-size: 0.75rem; color: var(--text-secondary); margin-left: 1.2rem; line-height: 1.6;">
+              <li><strong>User Profile:</strong> Display name, profile avatar, default mute preferences, and notification sound toggles.</li>
+              <li><strong>Personal Room Code:</strong> Permanent reusable room code and invite link.</li>
+              <li><strong>Media &amp; Bandwidth:</strong> Camera quality, screen-share mode, auto-reduce quality, and audio fallback.</li>
+              <li><strong>Network &amp; Signaling:</strong> Custom TURN relay credentials and API Signaling Gateway endpoint and secret key.</li>
+              <li><strong>Remote Assistance:</strong> Setu Companion port and pre-shared authorization passkey.</li>
+              <li><strong>Multi-Device Sync:</strong> Endpoint URL, Account ID, and Master Passphrase (device ID remains unique per device).</li>
+            </ul>
+          </div>
+        </div>
+
       </div>
 
-      <div class="dialog-footer" style="padding: 0.85rem 1.25rem; border-top: 1px solid var(--border-subtle); display: flex; justify-content: flex-end; gap: 0.5rem; flex-shrink: 0; background: var(--bg-surface-elevated);">
-        <button id="cancelSettingsBtn" class="btn btn-secondary" type="button">Cancel</button>
-        <button id="saveSettingsBtn" class="btn btn-primary" type="button">Save Settings</button>
+      <div class="dialog-footer" style="padding: 0.85rem 1.25rem; border-top: 1px solid var(--border-subtle); display: flex; justify-content: space-between; align-items: center; gap: 0.5rem; flex-shrink: 0; background: var(--bg-surface-elevated);">
+        <div style="display: flex; gap: 0.4rem;">
+          <button id="quickExportSettingsBtn" class="btn btn-secondary btn-sm" type="button" title="Export settings to JSON file">Export</button>
+          <button id="quickImportSettingsBtn" class="btn btn-secondary btn-sm" type="button" title="Import settings from JSON file">Import</button>
+        </div>
+        <div style="display: flex; gap: 0.5rem;">
+          <button id="cancelSettingsBtn" class="btn btn-secondary" type="button">Cancel</button>
+          <button id="saveSettingsBtn" class="btn btn-primary" type="button">Save Settings</button>
+        </div>
       </div>
     </div>
   </div>
@@ -2269,7 +2348,7 @@
   <div id="toastContainer" class="toast-container" aria-live="polite"></div>
 
   <!-- Core Subsystems & Application Logic -->
-  <script defer src="assets/js/storage.js?v=12"></script>
+  <script defer src="assets/js/storage.js?v=14"></script>
   <script defer src="assets/js/sound.js"></script>
   <script defer src="assets/js/signaling.js"></script>
   <script defer src="assets/js/room-signaling.js"></script>
@@ -2288,8 +2367,8 @@
   <script defer src="assets/js/remote-control.js"></script>
   <script defer src="assets/js/device-test.js"></script>
   <script defer src="assets/js/schedule.js"></script>
-  <script defer src="assets/js/sync-crypto.js?v=12"></script>
-  <script defer src="assets/js/sync-engine.js?v=12"></script>
-  <script defer src="assets/js/app.js?v=12"></script>
+  <script defer src="assets/js/sync-crypto.js?v=14"></script>
+  <script defer src="assets/js/sync-engine.js?v=14"></script>
+  <script defer src="assets/js/app.js?v=14"></script>
 </body>
 </html>

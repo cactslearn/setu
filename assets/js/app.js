@@ -1093,124 +1093,130 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
   }
 
-  if (saveSettingsBtn) {
-    saveSettingsBtn.addEventListener('click', async () => {
-      const displayName = profileDisplayNameInput?.value.trim() || 'You';
-      const defaultMutedAudio = !!prefMuteAudioCheckbox?.checked;
-      const defaultMutedVideo = !!prefMuteVideoCheckbox?.checked;
-      const noiseSuppression = !!prefNoiseSuppressionCheckbox?.checked;
-      const meetingSounds = prefMeetingSoundsCheckbox ? !!prefMeetingSoundsCheckbox.checked : true;
+  const persistSettingsFromForm = async (closeAfterSave = false, showToastMsg = true) => {
+    const displayName = profileDisplayNameInput?.value.trim() || 'You';
+    const defaultMutedAudio = !!prefMuteAudioCheckbox?.checked;
+    const defaultMutedVideo = !!prefMuteVideoCheckbox?.checked;
+    const noiseSuppression = !!prefNoiseSuppressionCheckbox?.checked;
+    const meetingSounds = prefMeetingSoundsCheckbox ? !!prefMeetingSoundsCheckbox.checked : true;
 
-      if (window.setuSound) {
-        window.setuSound.setEnabled(meetingSounds);
-      }
+    if (window.setuSound) {
+      window.setuSound.setEnabled(meetingSounds);
+    }
 
-      const cameraQuality = document.getElementById('settingCameraQuality')?.value || '720p';
-      const screenShareMode = document.getElementById('settingScreenShareMode')?.value || 'sharpness';
-      const autoReduceQuality = !!document.getElementById('settingAutoReduceQuality')?.checked;
-      const audioOnlyFallback = !!document.getElementById('settingAudioOnlyFallback')?.checked;
+    const cameraQuality = document.getElementById('settingCameraQuality')?.value || '720p';
+    const screenShareMode = document.getElementById('settingScreenShareMode')?.value || 'sharpness';
+    const autoReduceQuality = !!document.getElementById('settingAutoReduceQuality')?.checked;
+    const audioOnlyFallback = !!document.getElementById('settingAudioOnlyFallback')?.checked;
 
-      const turnServerUrl = document.getElementById('settingTurnServerUrl')?.value.trim() || '';
-      const turnUsername = document.getElementById('settingTurnUsername')?.value.trim() || '';
-      const turnCredential = document.getElementById('settingTurnCredential')?.value.trim() || '';
+    const turnServerUrl = document.getElementById('settingTurnServerUrl')?.value.trim() || '';
+    const turnUsername = document.getElementById('settingTurnUsername')?.value.trim() || '';
+    const turnCredential = document.getElementById('settingTurnCredential')?.value.trim() || '';
 
-      const rawPersonalCode = document.getElementById('settingPersonalRoomCode')?.value.trim() || '';
-      const cleanPersonalCode = window.setuRoomSignaling ? window.setuRoomSignaling.normalizeRoomCode(rawPersonalCode) : rawPersonalCode;
+    const rawPersonalCode = document.getElementById('settingPersonalRoomCode')?.value.trim() || '';
+    const cleanPersonalCode = window.setuRoomSignaling ? window.setuRoomSignaling.normalizeRoomCode(rawPersonalCode) : rawPersonalCode;
 
-      await window.setuStorage.saveUserProfile({
-        displayName,
-        personalRoomCode: cleanPersonalCode,
-        avatarDataUrl: currentAvatarDataUrl,
-        defaultMutedAudio,
-        defaultMuteAudio: defaultMutedAudio,
-        defaultMutedVideo,
-        defaultMuteVideo: defaultMutedVideo,
-        noiseSuppression,
-        meetingSounds,
-        cameraQuality,
-        screenShareMode,
-        autoReduceQuality,
-        audioOnlyFallback,
-        turnServerUrl,
-        turnUsername,
-        turnCredential
-      });
-
-      const welcomeBadge = document.getElementById('welcomePersonalCodeBadge');
-      if (welcomeBadge && cleanPersonalCode) {
-        welcomeBadge.textContent = window.setuRoomSignaling ? window.setuRoomSignaling.formatRoomCode(cleanPersonalCode) : cleanPersonalCode;
-      }
-
-      if (window.setuWebRTC) {
-        window.setuWebRTC.isAudioMuted = defaultMutedAudio;
-        window.setuWebRTC.isVideoMuted = defaultMutedVideo;
-        await window.setuWebRTC.applyCameraQuality(cameraQuality);
-        window.setuWebRTC.setScreenShareMode(screenShareMode);
-        window.setuWebRTC.setCustomIceServers(turnServerUrl, turnUsername, turnCredential);
-      }
-
-      // Save custom API signaling settings
-      if (window.setuStorage && window.setuStorage.saveApiSignalingSettings) {
-        try {
-          const apiEnabled = !!document.getElementById('settingApiSignalingEnabled')?.checked;
-          const apiEndpoint = document.getElementById('settingApiEndpoint')?.value.trim() || '';
-          const apiSecretKey = document.getElementById('settingApiSecretKey')?.value.trim() || '';
-          const apiPollInterval = parseInt(document.getElementById('settingApiPollInterval')?.value, 10) || 3;
-
-          await window.setuStorage.saveApiSignalingSettings({
-            enabled: apiEnabled,
-            endpoint: apiEndpoint,
-            secretKey: apiSecretKey,
-            pollIntervalSec: apiPollInterval
-          });
-        } catch (_) {}
-      }
-
-      // Save remote control & companion settings
-      if (window.setuStorage && window.setuStorage.saveRemoteControlSettings) {
-        try {
-          const companionPort = parseInt(document.getElementById('settingCompanionPort')?.value, 10) || 49152;
-          const companionPasskey = document.getElementById('settingCompanionPasskey')?.value.trim() || '';
-          await window.setuStorage.saveRemoteControlSettings({
-            companionPort,
-            companionPasskey
-          });
-          if (window.setuRemoteControl) {
-            window.setuRemoteControl.companionPort = companionPort;
-            window.setuRemoteControl.companionPasskey = companionPasskey;
-          }
-        } catch (_) {}
-      }
-
-      // Save multi-device sync settings
-      if (window.setuStorage && window.setuStorage.saveSyncSettings) {
-        try {
-          const syncEnabled = !!document.getElementById('settingSyncEnabled')?.checked;
-          const syncEndpoint = document.getElementById('settingSyncEndpoint')?.value.trim() || '';
-          const syncAccountId = document.getElementById('settingSyncAccountId')?.value.trim() || '';
-          const syncPoll = parseInt(document.getElementById('settingSyncPollInterval')?.value, 10) || 15;
-          const syncAuth = document.getElementById('settingSyncAuthToken')?.value.trim() || '';
-          const syncPass = document.getElementById('settingSyncMasterPassphrase')?.value.trim() || '';
-
-          await window.setuStorage.saveSyncSettings({
-            enabled: syncEnabled,
-            endpoint: syncEndpoint,
-            accountId: syncAccountId,
-            pollIntervalSec: syncPoll,
-            authToken: syncAuth,
-            masterPassphrase: syncPass
-          });
-
-          if (window.setuSyncEngine && typeof window.setuSyncEngine.reloadSettings === 'function') {
-            await window.setuSyncEngine.reloadSettings();
-          }
-        } catch (_) {}
-      }
-
-      broadcastUserProfile();
-      closeSettings();
-      window.showToast('Profile, personal room, and gateway settings saved');
+    await window.setuStorage.saveUserProfile({
+      displayName,
+      personalRoomCode: cleanPersonalCode,
+      avatarDataUrl: currentAvatarDataUrl,
+      defaultMutedAudio,
+      defaultMuteAudio: defaultMutedAudio,
+      defaultMutedVideo,
+      defaultMuteVideo: defaultMutedVideo,
+      noiseSuppression,
+      meetingSounds,
+      cameraQuality,
+      screenShareMode,
+      autoReduceQuality,
+      audioOnlyFallback,
+      turnServerUrl,
+      turnUsername,
+      turnCredential
     });
+
+    const welcomeBadge = document.getElementById('welcomePersonalCodeBadge');
+    if (welcomeBadge && cleanPersonalCode) {
+      welcomeBadge.textContent = window.setuRoomSignaling ? window.setuRoomSignaling.formatRoomCode(cleanPersonalCode) : cleanPersonalCode;
+    }
+
+    if (window.setuWebRTC) {
+      window.setuWebRTC.isAudioMuted = defaultMutedAudio;
+      window.setuWebRTC.isVideoMuted = defaultMutedVideo;
+      await window.setuWebRTC.applyCameraQuality(cameraQuality);
+      window.setuWebRTC.setScreenShareMode(screenShareMode);
+      window.setuWebRTC.setCustomIceServers(turnServerUrl, turnUsername, turnCredential);
+    }
+
+    // Save custom API signaling settings
+    if (window.setuStorage && window.setuStorage.saveApiSignalingSettings) {
+      try {
+        const apiEnabled = !!document.getElementById('settingApiSignalingEnabled')?.checked;
+        const apiEndpoint = document.getElementById('settingApiEndpoint')?.value.trim() || '';
+        const apiSecretKey = document.getElementById('settingApiSecretKey')?.value.trim() || '';
+        const apiPollInterval = parseInt(document.getElementById('settingApiPollInterval')?.value, 10) || 3;
+
+        await window.setuStorage.saveApiSignalingSettings({
+          enabled: apiEnabled,
+          endpoint: apiEndpoint,
+          secretKey: apiSecretKey,
+          pollIntervalSec: apiPollInterval
+        });
+      } catch (_) {}
+    }
+
+    // Save remote control & companion settings
+    if (window.setuStorage && window.setuStorage.saveRemoteControlSettings) {
+      try {
+        const companionPort = parseInt(document.getElementById('settingCompanionPort')?.value, 10) || 49152;
+        const companionPasskey = document.getElementById('settingCompanionPasskey')?.value.trim() || '';
+        await window.setuStorage.saveRemoteControlSettings({
+          companionPort,
+          companionPasskey
+        });
+        if (window.setuRemoteControl) {
+          window.setuRemoteControl.companionPort = companionPort;
+          window.setuRemoteControl.companionPasskey = companionPasskey;
+        }
+      } catch (_) {}
+    }
+
+    // Save multi-device sync settings
+    if (window.setuStorage && window.setuStorage.saveSyncSettings) {
+      try {
+        const syncEnabled = !!document.getElementById('settingSyncEnabled')?.checked;
+        const syncEndpoint = document.getElementById('settingSyncEndpoint')?.value.trim() || '';
+        const syncAccountId = document.getElementById('settingSyncAccountId')?.value.trim() || '';
+        const syncPoll = parseInt(document.getElementById('settingSyncPollInterval')?.value, 10) || 15;
+        const syncAuth = document.getElementById('settingSyncAuthToken')?.value.trim() || '';
+        const syncPass = document.getElementById('settingSyncMasterPassphrase')?.value.trim() || '';
+
+        await window.setuStorage.saveSyncSettings({
+          enabled: syncEnabled,
+          endpoint: syncEndpoint,
+          accountId: syncAccountId,
+          pollIntervalSec: syncPoll,
+          authToken: syncAuth,
+          masterPassphrase: syncPass
+        });
+
+        if (window.setuSyncEngine && typeof window.setuSyncEngine.reloadSettings === 'function') {
+          await window.setuSyncEngine.reloadSettings();
+        }
+      } catch (_) {}
+    }
+
+    broadcastUserProfile();
+    if (closeAfterSave) {
+      closeSettings();
+    }
+    if (showToastMsg && window.showToast) {
+      window.showToast('Profile, personal room, and gateway settings saved');
+    }
+  };
+
+  if (saveSettingsBtn) {
+    saveSettingsBtn.addEventListener('click', () => persistSettingsFromForm(true, true));
   }
 
   // Custom API Signaling Gateway UI listeners
@@ -1539,7 +1545,221 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (stores.includes('history') && typeof renderMeetingHistory === 'function') {
       renderMeetingHistory(currentHistoryFilter, historySearchInput?.value || '');
     }
+    if (stores.includes('contacts') && typeof window.renderSavedContactsChips === 'function') {
+      window.renderSavedContactsChips();
+    }
   });
+
+  // Settings Import & Export Handlers
+  const exportSettingsFileBtn = document.getElementById('exportSettingsFileBtn');
+  const copySettingsJsonBtn = document.getElementById('copySettingsJsonBtn');
+  const uploadSettingsFileBtn = document.getElementById('uploadSettingsFileBtn');
+  const importSettingsFileInput = document.getElementById('importSettingsFileInput');
+  const togglePasteSettingsAreaBtn = document.getElementById('togglePasteSettingsAreaBtn');
+  const pasteSettingsContainer = document.getElementById('pasteSettingsContainer');
+  const pasteSettingsJsonInput = document.getElementById('pasteSettingsJsonInput');
+  const applyPastedSettingsBtn = document.getElementById('applyPastedSettingsBtn');
+  const importSettingsFeedback = document.getElementById('importSettingsFeedback');
+  const quickExportSettingsBtn = document.getElementById('quickExportSettingsBtn');
+  const quickImportSettingsBtn = document.getElementById('quickImportSettingsBtn');
+
+  const executeSettingsExport = async () => {
+    if (!window.setuStorage || !window.setuStorage.exportSettings) {
+      if (window.showToast) window.showToast('Storage engine unavailable');
+      return null;
+    }
+    try {
+      if (typeof persistSettingsFromForm === 'function') {
+        await persistSettingsFromForm(false, false);
+      }
+      const data = await window.setuStorage.exportSettings();
+      const jsonStr = JSON.stringify(data, null, 2);
+      const blob = new Blob([jsonStr], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      const dateStr = new Date().toISOString().slice(0, 10);
+      a.href = url;
+      a.download = `setu_settings_backup_${dateStr}.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      if (window.showToast) window.showToast('Settings exported to ' + a.download);
+      return data;
+    } catch (err) {
+      console.warn('[Settings Export] Error:', err);
+      if (window.showToast) window.showToast('Failed to export settings: ' + err.message);
+      return null;
+    }
+  };
+
+  const copySettingsToClipboard = async () => {
+    if (!window.setuStorage || !window.setuStorage.exportSettings) return;
+    try {
+      if (typeof persistSettingsFromForm === 'function') {
+        await persistSettingsFromForm(false, false);
+      }
+      const data = await window.setuStorage.exportSettings();
+      const jsonStr = JSON.stringify(data, null, 2);
+      await navigator.clipboard.writeText(jsonStr);
+      if (importSettingsFeedback) {
+        importSettingsFeedback.textContent = 'Settings JSON copied to clipboard!';
+        importSettingsFeedback.style.color = 'var(--accent-teal)';
+      }
+      if (window.showToast) window.showToast('Settings JSON copied to clipboard');
+    } catch (err) {
+      if (window.showToast) window.showToast('Could not copy to clipboard: ' + err.message);
+    }
+  };
+
+  const executeSettingsImport = async (jsonString) => {
+    if (!window.setuStorage || !window.setuStorage.importSettings) {
+      throw new Error('Storage engine unavailable');
+    }
+    if (importSettingsFeedback) {
+      importSettingsFeedback.textContent = 'Importing and validating settings...';
+      importSettingsFeedback.style.color = 'var(--accent-blue)';
+    }
+
+    const result = await window.setuStorage.importSettings(jsonString, true);
+
+    // Refresh UI inputs and applied engines
+    await loadUserProfile();
+
+    if (window.setuSyncEngine && typeof window.setuSyncEngine.reloadSettings === 'function') {
+      await window.setuSyncEngine.reloadSettings();
+    }
+
+    const profile = await window.setuStorage.getUserProfile();
+    if (profile && profile.personalRoomCode) {
+      const welcomeBadge = document.getElementById('welcomePersonalCodeBadge');
+      if (welcomeBadge) {
+        welcomeBadge.textContent = window.setuRoomSignaling ? window.setuRoomSignaling.formatRoomCode(profile.personalRoomCode) : profile.personalRoomCode;
+      }
+    }
+
+    if (importSettingsFeedback) {
+      importSettingsFeedback.textContent = `Settings restored successfully (${result.importedCount} sections imported).`;
+      importSettingsFeedback.style.color = 'var(--accent-teal)';
+    }
+    if (window.showToast) {
+      window.showToast('Settings imported and active!');
+    }
+  };
+
+  exportSettingsFileBtn?.addEventListener('click', executeSettingsExport);
+  quickExportSettingsBtn?.addEventListener('click', executeSettingsExport);
+
+  copySettingsJsonBtn?.addEventListener('click', copySettingsToClipboard);
+
+  uploadSettingsFileBtn?.addEventListener('click', () => {
+    importSettingsFileInput?.click();
+  });
+
+  quickImportSettingsBtn?.addEventListener('click', () => {
+    importSettingsFileInput?.click();
+  });
+
+  importSettingsFileInput?.addEventListener('change', (e) => {
+    const file = e.target.files && e.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = async (event) => {
+      try {
+        const content = event.target?.result;
+        if (!content) throw new Error('File is empty');
+        await executeSettingsImport(content);
+      } catch (err) {
+        console.warn('[Settings Import Error]:', err);
+        if (importSettingsFeedback) {
+          importSettingsFeedback.textContent = 'Import error: ' + (err.message || 'Invalid format');
+          importSettingsFeedback.style.color = 'var(--accent-rose)';
+        }
+        if (window.showToast) window.showToast('Import error: ' + err.message);
+      } finally {
+        importSettingsFileInput.value = '';
+      }
+    };
+    reader.readAsText(file);
+  });
+
+  togglePasteSettingsAreaBtn?.addEventListener('click', () => {
+    if (!pasteSettingsContainer) return;
+    const isHidden = pasteSettingsContainer.style.display === 'none';
+    pasteSettingsContainer.style.display = isHidden ? 'flex' : 'none';
+    togglePasteSettingsAreaBtn.textContent = isHidden ? 'Hide Paste Area' : 'Paste JSON Text';
+    if (isHidden && pasteSettingsJsonInput) {
+      pasteSettingsJsonInput.focus();
+    }
+  });
+
+  applyPastedSettingsBtn?.addEventListener('click', async () => {
+    const val = pasteSettingsJsonInput?.value.trim();
+    if (!val) {
+      if (importSettingsFeedback) {
+        importSettingsFeedback.textContent = 'Please paste settings JSON first.';
+        importSettingsFeedback.style.color = 'var(--accent-rose)';
+      }
+      return;
+    }
+    try {
+      await executeSettingsImport(val);
+      pasteSettingsJsonInput.value = '';
+      if (pasteSettingsContainer) pasteSettingsContainer.style.display = 'none';
+      if (togglePasteSettingsAreaBtn) togglePasteSettingsAreaBtn.textContent = 'Paste JSON Text';
+    } catch (err) {
+      console.warn('[Pasted Settings Import Error]:', err);
+      if (importSettingsFeedback) {
+        importSettingsFeedback.textContent = 'Import error: ' + (err.message || 'Invalid format');
+        importSettingsFeedback.style.color = 'var(--accent-rose)';
+      }
+      if (window.showToast) window.showToast('Import error: ' + err.message);
+    }
+  });
+
+  const importSettingsDropZone = document.getElementById('importSettingsDropZone');
+  if (importSettingsDropZone) {
+    ['dragenter', 'dragover'].forEach(eventName => {
+      importSettingsDropZone.addEventListener(eventName, (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        importSettingsDropZone.style.borderColor = 'var(--accent-blue)';
+        importSettingsDropZone.style.backgroundColor = 'var(--bg-surface)';
+      });
+    });
+
+    ['dragleave', 'drop'].forEach(eventName => {
+      importSettingsDropZone.addEventListener(eventName, (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        importSettingsDropZone.style.borderColor = 'var(--border-subtle)';
+        importSettingsDropZone.style.backgroundColor = 'var(--bg-surface-elevated)';
+      });
+    });
+
+    importSettingsDropZone.addEventListener('drop', (e) => {
+      const dt = e.dataTransfer;
+      const file = dt && dt.files && dt.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = async (event) => {
+        try {
+          const content = event.target?.result;
+          if (!content) throw new Error('File is empty');
+          await executeSettingsImport(content);
+        } catch (err) {
+          console.warn('[Settings Drop Import Error]:', err);
+          if (importSettingsFeedback) {
+            importSettingsFeedback.textContent = 'Import error: ' + (err.message || 'Invalid format');
+            importSettingsFeedback.style.color = 'var(--accent-rose)';
+          }
+          if (window.showToast) window.showToast('Import error: ' + err.message);
+        }
+      };
+      reader.readAsText(file);
+    });
+  }
 
   // 17. Meeting History & Archive
   const historyModal = document.getElementById('historyModal');

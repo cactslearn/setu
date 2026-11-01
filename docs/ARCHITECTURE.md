@@ -87,6 +87,8 @@ Because there is no signaling server, Setu uses **Manual Non-Trickle ICE Exchang
   - If an active offer exists: Assumes the Joiner role, downloads the offer, and publishes an encrypted answer.
   - If no offer exists: Assumes the Host role, initializes WebRTC, and publishes an offer.
 - **Bandwidth Conservation (Polling Lifecycle):** Polling against the signaling gateway is terminated immediately once the direct P2P connection reaches `connected` state.
+- **Zero-Knowledge Payload Encryption:** SDP offers and answers are encrypted client-side using the normalized room code via AES-GCM-256 before transmission. Intermediate servers only ever see opaque ciphertext.
+- **Serverless Gateway & Script Properties Security:** When deployed on Google Apps Script, authentication keys are stored exclusively in **Project Settings -> Script Properties** (`SECRET_KEY`). Host actions (offer creation and room deletion) must supply matching secret credentials. Plaintext secret keys are never committed to code repositories or client bundles. For complete deployment instructions, see [docs/DEPLOYMENT.md](DEPLOYMENT.md).
 
 ### 2.10 Built-in Audio Notification Service (`assets/js/sound.js`)
 - **Zero-Asset Web Audio API Synthesizer:** Produces clean, harmonic acoustic cues directly from browser audio synthesis without loading external MP3 or WAV files.
@@ -119,4 +121,16 @@ Because there is no signaling server, Setu uses **Manual Non-Trickle ICE Exchang
 - **Microphone Signal Analyzer & 4-Second Voice Loopback:** Uses an `AnalyserNode` for real-time frequency-based input level metering and a 4-second `MediaRecorder` speech buffer that plays back through the chosen speaker/earpiece sink to verify audio capture fidelity.
 - **Speaker Diagnostic Synthesizer:** Generates harmonic chime tones routed to the designated output sink for audible verification.
 - **Strict Hardware Lifecycle Management:** All test streams and audio contexts are automatically torn down whenever the dialog is closed or tabs are changed, ensuring zero background camera/mic resource locking.
+
+### 2.15 Multi-Device Synchronization Engine (`assets/js/sync-engine.js` & `assets/js/sync-crypto.js`)
+- **Zero-Knowledge Multi-Device Sync:** Synchronizes contacts, schedules, meeting archives, and profile settings across paired devices without giving the server access to plaintext records.
+- **Provider-Independent Protocol:** Communicates via a standard 5-endpoint REST interface (`/sync/register`, `/sync/changes` GET/POST, `/sync/status`, `/sync/acknowledge`) hostable on Google Apps Script, Node.js, Cloudflare Workers, or private NAS.
+- **Cryptographic Envelope Architecture:**
+  - Key derivation uses PBKDF2 (600,000 iterations) and HKDF-SHA256 to produce separated keys: `K_enc` (AES-256-GCM record encryption), `K_blind` (HMAC-SHA256 store and record ID blinding), and `K_auth` (API Bearer token).
+  - Every device holds a non-extractable asymmetric ECDSA P-256 keypair; every outgoing record change envelope is digitally signed for tamper-proof non-repudiation.
+  - Uniform bucket padding (512 B, 2 KB, 8 KB, 32 KB, 128 KB) obscures plaintext payload size patterns.
+- **Serverless Google Apps Script Storage Isolation:**
+  - Backed by a designated Google Drive folder configured strictly via **Project Settings -> Script Properties** (`SYNC_FOLDER_ID`). Zero full-drive access.
+  - API authorization verified against `SECRET_KEY` stored in Script Properties.
+  - For full protocol specifications and reference code, see [docs/SYNC_SPEC.md](SYNC_SPEC.md).
 

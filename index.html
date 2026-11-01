@@ -245,6 +245,15 @@
             <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
           </svg>
         </button>
+
+        <!-- Multi-Device Sync Button -->
+        <button type="button" id="openSyncSettingsBtn" class="tool-icon-btn" title="Sync Now (Click to Synchronize)" aria-label="Synchronize data across devices" onclick="if(window.triggerManualSync){window.triggerManualSync(event);event.stopPropagation();}">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="23 4 23 10 17 10"></polyline>
+            <polyline points="1 20 1 14 7 14"></polyline>
+            <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
+          </svg>
+        </button>
       </div>
 
       <!-- Mobile Hamburger Menu Button & Dropdown (Visible on Mobile) -->
@@ -269,6 +278,10 @@
           <button type="button" class="header-menu-item" id="mobileMenuPermQrBtn" role="menuitem">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
             <span>Reusable Identity QR</span>
+          </button>
+          <button type="button" class="header-menu-item" id="mobileMenuSyncBtn" role="menuitem">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>
+            <span>Sync Now</span>
           </button>
           <button type="button" class="header-menu-item" id="mobileMenuSettingsBtn" role="menuitem">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
@@ -1535,6 +1548,10 @@
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg>
           <span>Remote Control</span>
         </button>
+        <button class="settings-tab-btn" role="tab" aria-selected="false" data-tab="sync" id="settingsTabBtnSync">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>
+          <span>Multi-Device Sync</span>
+        </button>
       </nav>
 
       <div class="dialog-body" style="overflow-y: auto; flex: 1;">
@@ -1890,6 +1907,81 @@
           </div>
         </div>
 
+        <!-- Tab 7: Multi-Device Sync -->
+        <div id="tab-sync" class="settings-tab-pane" role="tabpanel">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.4rem;">
+            <div style="font-weight: 700; font-size: 0.9rem; color: var(--text-main);">Multi-Device Synchronization</div>
+            <span id="syncHeaderStatusBadge" class="badge badge-secondary" style="font-size: 0.725rem;">Disabled</span>
+          </div>
+          <div style="font-size: 0.75rem; color: var(--text-muted); margin-bottom: 0.75rem; line-height: 1.45;">
+            Synchronize contacts, schedules, meeting archives, and profile settings across your devices using a standard Setu Sync API server (Google Apps Script, Node.js, Cloudflare Workers, NAS, or private server). Data is encrypted client-side using zero-knowledge AES-256-GCM.
+          </div>
+
+          <label style="display: flex; align-items: center; gap: 0.6rem; font-size: 0.85rem; font-weight: 600; cursor: pointer; margin-bottom: 1rem; padding: 0.6rem 0.85rem; background: var(--bg-surface-elevated); border: 1px solid var(--border-subtle); border-radius: var(--radius-sm);">
+            <input type="checkbox" id="settingSyncEnabled">
+            <span>Enable Automatic Multi-Device Synchronization</span>
+          </label>
+
+          <div id="syncConfigSection" style="display: flex; flex-direction: column; gap: 0.85rem;">
+            <div class="form-field-group">
+              <label class="form-label" for="settingSyncEndpoint">Synchronization Endpoint URL</label>
+              <input type="url" id="settingSyncEndpoint" class="select-input" placeholder="e.g. https://sync.example.com/api or https://script.google.com/macros/s/.../exec">
+              <div style="font-size: 0.7rem; color: var(--text-muted); margin-top: 0.25rem;">The HTTPS URL of any standard Setu Sync compatible server.</div>
+            </div>
+
+            <div class="dialog-grid-2col" style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
+              <div class="form-field-group">
+                <label class="form-label" for="settingSyncAccountId">Account / Ring Identifier</label>
+                <input type="text" id="settingSyncAccountId" class="select-input" placeholder="e.g. my_account_id">
+              </div>
+              <div class="form-field-group">
+                <label class="form-label" for="settingSyncPollInterval">Polling Frequency</label>
+                <select id="settingSyncPollInterval" class="select-input">
+                  <option value="5">Every 5 seconds</option>
+                  <option value="15" selected>Every 15 seconds (Recommended)</option>
+                  <option value="30">Every 30 seconds</option>
+                  <option value="60">Every 1 minute</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="form-field-group">
+              <label class="form-label" for="settingSyncAuthToken">Authentication Token / API Key (Optional)</label>
+              <input type="password" id="settingSyncAuthToken" class="select-input" placeholder="Bearer token or API secret if required by server">
+            </div>
+
+            <div class="form-field-group">
+              <label class="form-label" for="settingSyncMasterPassphrase">Master Encryption Passphrase (Zero-Knowledge)</label>
+              <div class="dialog-input-btn-group" style="display: flex; gap: 0.4rem; flex-wrap: wrap;">
+                <input type="password" id="settingSyncMasterPassphrase" class="select-input" placeholder="Secret passphrase for client-side AES-256-GCM encryption" style="flex: 1; min-width: 200px;">
+                <button type="button" id="toggleSyncPassphraseVisibilityBtn" class="btn btn-secondary btn-sm" style="white-space: nowrap;">Show</button>
+                <button type="button" id="generateSyncPassphraseBtn" class="btn btn-secondary btn-sm" style="white-space: nowrap;" title="Generate secure random master passphrase">Generate</button>
+                <button type="button" id="copySyncPassphraseBtn" class="btn btn-secondary btn-sm" style="white-space: nowrap;" title="Copy passphrase to clipboard">Copy</button>
+              </div>
+              <div style="font-size: 0.7rem; color: var(--text-muted); margin-top: 0.25rem;">To sync between devices, enter the EXACT SAME passphrase and Account ID used on your other device. Plaintext data never leaves this browser.</div>
+            </div>
+
+            <div class="dialog-action-banner" style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; margin-top: 0.25rem;">
+              <button type="button" id="testSyncEndpointBtn" class="btn btn-secondary btn-sm">Test Connection</button>
+              <button type="button" id="forceSyncNowBtn" class="btn btn-primary btn-sm">Sync Now</button>
+              <button type="button" id="resyncAllDataBtn" class="btn btn-secondary btn-sm" title="Reset sync cursor and re-download all historical records">Resync All Data</button>
+              <span id="syncEndpointTestStatus" style="font-size: 0.75rem; margin-left: 0.5rem; flex: 1;"></span>
+            </div>
+
+            <!-- Sync Diagnostics & Device Ring -->
+            <div style="border-top: 1px solid var(--border-subtle); padding-top: 0.85rem; margin-top: 0.4rem;">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.4rem;">
+                <span style="font-weight: 600; font-size: 0.8rem; color: var(--text-main);">Current Device ID</span>
+                <code id="syncLocalDeviceIdBadge" style="font-family: var(--font-mono); font-size: 0.75rem; color: var(--accent-blue);">dev_...</code>
+              </div>
+              <div style="display: flex; justify-content: space-between; align-items: center;">
+                <span style="font-weight: 600; font-size: 0.8rem; color: var(--text-main);">Last Sync Event</span>
+                <span id="syncLastTimeBadge" style="font-size: 0.75rem; color: var(--text-muted);">Never</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
       </div>
 
       <div class="dialog-footer" style="padding: 0.85rem 1.25rem; border-top: 1px solid var(--border-subtle); display: flex; justify-content: flex-end; gap: 0.5rem; flex-shrink: 0; background: var(--bg-surface-elevated);">
@@ -2187,7 +2279,7 @@
   <div id="toastContainer" class="toast-container" aria-live="polite"></div>
 
   <!-- Core Subsystems & Application Logic -->
-  <script defer src="assets/js/storage.js"></script>
+  <script defer src="assets/js/storage.js?v=12"></script>
   <script defer src="assets/js/sound.js"></script>
   <script defer src="assets/js/signaling.js"></script>
   <script defer src="assets/js/room-signaling.js"></script>
@@ -2206,6 +2298,8 @@
   <script defer src="assets/js/remote-control.js"></script>
   <script defer src="assets/js/device-test.js"></script>
   <script defer src="assets/js/schedule.js"></script>
-  <script defer src="assets/js/app.js"></script>
+  <script defer src="assets/js/sync-crypto.js?v=12"></script>
+  <script defer src="assets/js/sync-engine.js?v=12"></script>
+  <script defer src="assets/js/app.js?v=12"></script>
 </body>
 </html>

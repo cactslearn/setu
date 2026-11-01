@@ -64,7 +64,8 @@ setu/
 │   ├── DISCLAIMER.md           # As-is warranty & liability limitations
 │   ├── DEPLOYMENT.md           # Static deployment guide (GitHub Pages)
 │   ├── RECORDING.md            # Consensual recording policy & technical limits
-│   └── SECURITY.md             # Security architecture & vulnerability reporting
+│   ├── SECURITY.md             # Security architecture & vulnerability reporting
+│   └── SYNC_SPEC.md            # Zero-knowledge multi-device sync specification
 ├── LICENSE                     # Apache License 2.0
 ├── NOTICE                      # Copyright & third-party notices
 ├── README.md                   # Project overview & documentation

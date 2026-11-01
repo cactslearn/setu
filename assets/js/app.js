@@ -38,6 +38,9 @@ document.addEventListener('DOMContentLoaded', async () => {
   if (window.setuSchedule) {
     window.setuSchedule.init();
   }
+  if (window.setuSyncEngine) {
+    await window.setuSyncEngine.init();
+  }
 
   const canvasEl = document.getElementById('whiteboardCanvas');
   const notepadEl = document.getElementById('sharedNotepadText');
@@ -830,6 +833,43 @@ document.addEventListener('DOMContentLoaded', async () => {
           if (passkeyInput) passkeyInput.value = rcSettings.companionPasskey || '';
         } catch (_) {}
       }
+
+      // Load multi-device sync settings
+      if (window.setuStorage && window.setuStorage.getSyncSettings) {
+        try {
+          const syncSettings = await window.setuStorage.getSyncSettings();
+          const syncEnabled = document.getElementById('settingSyncEnabled');
+          const syncEndpoint = document.getElementById('settingSyncEndpoint');
+          const syncAccountId = document.getElementById('settingSyncAccountId');
+          const syncPoll = document.getElementById('settingSyncPollInterval');
+          const syncAuth = document.getElementById('settingSyncAuthToken');
+          const syncPass = document.getElementById('settingSyncMasterPassphrase');
+          const localDevId = document.getElementById('syncLocalDeviceIdBadge');
+          const lastTimeBadge = document.getElementById('syncLastTimeBadge');
+          const headerBadge = document.getElementById('syncHeaderStatusBadge');
+
+          if (syncEnabled) syncEnabled.checked = !!syncSettings.enabled;
+          if (syncEndpoint) syncEndpoint.value = syncSettings.endpoint || '';
+          if (syncAccountId) syncAccountId.value = syncSettings.accountId || '';
+          if (syncPoll) syncPoll.value = String(syncSettings.pollIntervalSec || 15);
+          if (syncAuth) syncAuth.value = syncSettings.authToken || '';
+          if (syncPass) syncPass.value = syncSettings.masterPassphrase || '';
+
+          if (localDevId) {
+            const devId = await window.setuStorage.getDeviceId();
+            localDevId.textContent = devId;
+          }
+
+          if (lastTimeBadge && syncSettings.lastSyncTimestamp) {
+            lastTimeBadge.textContent = new Date(syncSettings.lastSyncTimestamp).toLocaleTimeString();
+          }
+
+          if (headerBadge) {
+            headerBadge.textContent = syncSettings.enabled ? 'Active' : 'Disabled';
+            headerBadge.className = syncSettings.enabled ? 'badge badge-primary' : 'badge badge-secondary';
+          }
+        } catch (_) {}
+      }
     } catch (e) {
       console.warn('Failed to load profile:', e);
     }
@@ -1142,6 +1182,31 @@ document.addEventListener('DOMContentLoaded', async () => {
         } catch (_) {}
       }
 
+      // Save multi-device sync settings
+      if (window.setuStorage && window.setuStorage.saveSyncSettings) {
+        try {
+          const syncEnabled = !!document.getElementById('settingSyncEnabled')?.checked;
+          const syncEndpoint = document.getElementById('settingSyncEndpoint')?.value.trim() || '';
+          const syncAccountId = document.getElementById('settingSyncAccountId')?.value.trim() || '';
+          const syncPoll = parseInt(document.getElementById('settingSyncPollInterval')?.value, 10) || 15;
+          const syncAuth = document.getElementById('settingSyncAuthToken')?.value.trim() || '';
+          const syncPass = document.getElementById('settingSyncMasterPassphrase')?.value.trim() || '';
+
+          await window.setuStorage.saveSyncSettings({
+            enabled: syncEnabled,
+            endpoint: syncEndpoint,
+            accountId: syncAccountId,
+            pollIntervalSec: syncPoll,
+            authToken: syncAuth,
+            masterPassphrase: syncPass
+          });
+
+          if (window.setuSyncEngine && typeof window.setuSyncEngine.reloadSettings === 'function') {
+            await window.setuSyncEngine.reloadSettings();
+          }
+        } catch (_) {}
+      }
+
       broadcastUserProfile();
       closeSettings();
       window.showToast('Profile, personal room, and gateway settings saved');
@@ -1195,6 +1260,284 @@ document.addEventListener('DOMContentLoaded', async () => {
         testApiStatus.textContent = err.message || 'Connection failed';
         testApiStatus.style.color = 'var(--accent-rose)';
       }
+    }
+  });
+
+  // Multi-Device Sync UI Listeners
+  const toggleSyncPassBtn = document.getElementById('toggleSyncPassphraseVisibilityBtn');
+  const generateSyncPassBtn = document.getElementById('generateSyncPassphraseBtn');
+  const copySyncPassBtn = document.getElementById('copySyncPassphraseBtn');
+  const syncPassInput = document.getElementById('settingSyncMasterPassphrase');
+
+  toggleSyncPassBtn?.addEventListener('click', () => {
+    if (syncPassInput) {
+      const isPass = syncPassInput.type === 'password';
+      syncPassInput.type = isPass ? 'text' : 'password';
+      toggleSyncPassBtn.textContent = isPass ? 'Hide' : 'Show';
+    }
+  });
+
+  generateSyncPassBtn?.addEventListener('click', () => {
+    if (!syncPassInput) return;
+    const words = [
+      'amber', 'anchor', 'beacon', 'breeze', 'bridge', 'canyon', 'castle', 'cedar',
+      'comet', 'coral', 'crystal', 'delta', 'falcon', 'forest', 'galaxy', 'glacier',
+      'harbor', 'horizon', 'island', 'jasper', 'lagoon', 'meadow', 'nebula', 'oasis',
+      'orbit', 'palace', 'pebble', 'phoenix', 'pinnacle', 'prairie', 'prism', 'quasar',
+      'radiant', 'rapids', 'ripple', 'river', 'sanctuary', 'shadow', 'summit', 'temple',
+      'timber', 'topaz', 'valley', 'voyage', 'vortex', 'willow', 'zenith', 'zephyr'
+    ];
+    const bytes = new Uint8Array(4);
+    if (typeof crypto !== 'undefined' && crypto.getRandomValues) {
+      crypto.getRandomValues(bytes);
+    } else {
+      for (let i = 0; i < 4; i++) bytes[i] = Math.floor(Math.random() * 256);
+    }
+    const chosenWords = Array.from(bytes).map(b => words[b % words.length]);
+    const num = Math.floor(100 + Math.random() * 900);
+    const generated = `${chosenWords.join('-')}-${num}`;
+
+    syncPassInput.value = generated;
+    syncPassInput.type = 'text';
+    if (toggleSyncPassBtn) toggleSyncPassBtn.textContent = 'Hide';
+    if (window.showToast) window.showToast('Generated secure master passphrase');
+  });
+
+  copySyncPassBtn?.addEventListener('click', async () => {
+    const val = syncPassInput?.value.trim();
+    if (!val) {
+      if (window.showToast) window.showToast('No passphrase to copy');
+      return;
+    }
+    try {
+      await navigator.clipboard.writeText(val);
+      if (window.showToast) window.showToast('Master passphrase copied to clipboard');
+    } catch (_) {
+      if (syncPassInput) {
+        syncPassInput.select();
+        document.execCommand('copy');
+      }
+      if (window.showToast) window.showToast('Master passphrase copied to clipboard');
+    }
+  });
+
+  const testSyncBtn = document.getElementById('testSyncEndpointBtn');
+  const testSyncStatus = document.getElementById('syncEndpointTestStatus');
+  testSyncBtn?.addEventListener('click', async () => {
+    const endpoint = document.getElementById('settingSyncEndpoint')?.value.trim();
+    const accountId = document.getElementById('settingSyncAccountId')?.value.trim();
+    const authToken = document.getElementById('settingSyncAuthToken')?.value.trim();
+    const masterPassphrase = document.getElementById('settingSyncMasterPassphrase')?.value.trim();
+
+    if (!endpoint) {
+      if (testSyncStatus) {
+        testSyncStatus.textContent = 'Please enter a Synchronization Endpoint URL';
+        testSyncStatus.style.color = 'var(--accent-rose)';
+      }
+      return;
+    }
+    if (!masterPassphrase) {
+      if (testSyncStatus) {
+        testSyncStatus.textContent = 'Please enter your Master Encryption Passphrase';
+        testSyncStatus.style.color = 'var(--accent-rose)';
+      }
+      return;
+    }
+
+    if (testSyncStatus) {
+      testSyncStatus.textContent = 'Testing connection & deriving zero-knowledge keys...';
+      testSyncStatus.style.color = 'var(--accent-blue)';
+    }
+
+    try {
+      if (!window.setuSyncEngine || typeof window.setuSyncEngine.testConnection !== 'function') {
+        throw new Error('Sync engine not initialized');
+      }
+      const res = await window.setuSyncEngine.testConnection(endpoint, accountId, authToken, masterPassphrase);
+      if (testSyncStatus) {
+        testSyncStatus.textContent = res.message || 'Connected successfully!';
+        testSyncStatus.style.color = 'var(--accent-teal)';
+      }
+    } catch (err) {
+      if (testSyncStatus) {
+        testSyncStatus.textContent = err.message || 'Connection failed';
+        testSyncStatus.style.color = 'var(--accent-rose)';
+      }
+    }
+  });
+
+  const forceSyncNowBtn = document.getElementById('forceSyncNowBtn');
+  forceSyncNowBtn?.addEventListener('click', async (e) => {
+    if (testSyncStatus) {
+      testSyncStatus.textContent = 'Sync in progress...';
+      testSyncStatus.style.color = 'var(--accent-blue)';
+    }
+    await triggerManualSync(e);
+    if (testSyncStatus && window.setuSyncEngine) {
+      if (window.setuSyncEngine.status === 'connected') {
+        const stats = window.setuSyncEngine.lastSyncStats;
+        let msg = 'Sync completed successfully';
+        if (stats && (stats.pushed > 0 || stats.pulled > 0)) {
+          const parts = [];
+          if (stats.pushed > 0) parts.push(`uploaded ${stats.pushed} records`);
+          if (stats.pulled > 0) parts.push(`downloaded ${stats.pulled} records`);
+          msg = `Sync completed: ${parts.join(', ')}`;
+        }
+        testSyncStatus.textContent = msg;
+        testSyncStatus.style.color = 'var(--accent-teal)';
+      } else {
+        testSyncStatus.textContent = window.setuSyncEngine.lastErrorMessage || 'Sync failed';
+        testSyncStatus.style.color = 'var(--accent-rose)';
+      }
+    }
+  });
+
+  const resyncAllDataBtn = document.getElementById('resyncAllDataBtn');
+  resyncAllDataBtn?.addEventListener('click', async () => {
+    if (!window.setuSyncEngine) {
+      if (window.showToast) window.showToast('Sync engine not initialized');
+      return;
+    }
+    if (window.setuSyncEngine.isSyncing) {
+      if (window.showToast) window.showToast('Sync is already in progress...');
+      return;
+    }
+    if (testSyncStatus) {
+      testSyncStatus.textContent = 'Resetting cursor and resyncing all records...';
+      testSyncStatus.style.color = 'var(--accent-blue)';
+    }
+    if (window.showToast) window.showToast('Resyncing all records from scratch...');
+    try {
+      await window.setuSyncEngine.resyncAllData();
+      if (window.setuSyncEngine.status === 'connected') {
+        const stats = window.setuSyncEngine.lastSyncStats;
+        let msg = 'Full resync completed successfully';
+        if (stats && (stats.pushed > 0 || stats.pulled > 0)) {
+          const parts = [];
+          if (stats.pushed > 0) parts.push(`uploaded ${stats.pushed}`);
+          if (stats.pulled > 0) parts.push(`downloaded ${stats.pulled}`);
+          msg = `Full resync: ${parts.join(', ')}`;
+        } else {
+          msg = 'Full resync completed: data is up to date';
+        }
+        if (testSyncStatus) {
+          testSyncStatus.textContent = msg;
+          testSyncStatus.style.color = 'var(--accent-teal)';
+        }
+        if (window.showToast) window.showToast(msg);
+      } else {
+        const errMsg = window.setuSyncEngine.lastErrorMessage || 'Resync failed';
+        if (testSyncStatus) {
+          testSyncStatus.textContent = errMsg;
+          testSyncStatus.style.color = 'var(--accent-rose)';
+        }
+        if (window.showToast) window.showToast(errMsg);
+      }
+    } catch (err) {
+      const errMsg = err.message || 'Resync failed';
+      if (testSyncStatus) {
+        testSyncStatus.textContent = errMsg;
+        testSyncStatus.style.color = 'var(--accent-rose)';
+      }
+      if (window.showToast) window.showToast(errMsg);
+    }
+  });
+
+  const openSyncSettingsBtn = document.getElementById('openSyncSettingsBtn');
+  const triggerManualSync = async (e) => {
+    if (e) {
+      if (typeof e.preventDefault === 'function') e.preventDefault();
+      if (typeof e.stopPropagation === 'function') e.stopPropagation();
+    }
+
+    if (!window.setuSyncEngine) {
+      if (window.showToast) window.showToast('Sync engine not initialized');
+      return;
+    }
+
+    if (window.setuSyncEngine.isSyncing) {
+      if (window.showToast) window.showToast('Sync is already in progress...');
+      return;
+    }
+
+    if (window.showToast) window.showToast('Synchronizing data across devices...');
+    await window.setuSyncEngine.triggerSyncNow(true);
+    if (window.setuSyncEngine.status === 'connected') {
+      const stats = window.setuSyncEngine.lastSyncStats;
+      let msg = 'Sync completed successfully';
+      if (stats && (stats.pushed > 0 || stats.pulled > 0)) {
+        const parts = [];
+        if (stats.pushed > 0) parts.push(`uploaded ${stats.pushed} records`);
+        if (stats.pulled > 0) parts.push(`downloaded ${stats.pulled} records`);
+        msg = `Sync completed: ${parts.join(', ')}`;
+      } else if (stats && stats.pushed === 0 && stats.pulled === 0) {
+        msg = 'Sync completed: data is up to date';
+      }
+      if (window.showToast) window.showToast(msg);
+    } else if (window.setuSyncEngine.status === 'error') {
+      if (window.showToast) window.showToast(window.setuSyncEngine.lastErrorMessage || 'Sync failed');
+    }
+  };
+  window.triggerManualSync = triggerManualSync;
+
+  const mobileMenuSyncBtn = document.getElementById('mobileMenuSyncBtn');
+  openSyncSettingsBtn?.addEventListener('click', triggerManualSync);
+
+  window.addEventListener('setu-sync-status-change', (e) => {
+    const detail = e.detail || {};
+    const headerBadge = document.getElementById('syncHeaderStatusBadge');
+    const lastTimeBadge = document.getElementById('syncLastTimeBadge');
+
+    if (detail.status === 'syncing') {
+      openSyncSettingsBtn?.classList.add('sync-spinning');
+      mobileMenuSyncBtn?.classList.add('sync-spinning');
+      if (openSyncSettingsBtn) openSyncSettingsBtn.title = 'Syncing data...';
+    } else {
+      openSyncSettingsBtn?.classList.remove('sync-spinning');
+      mobileMenuSyncBtn?.classList.remove('sync-spinning');
+      if (openSyncSettingsBtn) openSyncSettingsBtn.title = 'Sync Now (Click to Synchronize)';
+    }
+
+    if (headerBadge) {
+      if (detail.status === 'syncing') {
+        headerBadge.textContent = 'Syncing...';
+        headerBadge.className = 'badge badge-primary';
+      } else if (detail.status === 'connected') {
+        headerBadge.textContent = 'Active (' + (detail.activeDeviceCount || 1) + ' devices)';
+        headerBadge.className = 'badge badge-primary';
+      } else if (detail.status === 'error') {
+        headerBadge.textContent = 'Error';
+        headerBadge.className = 'badge badge-danger';
+      } else if (detail.status === 'offline') {
+        headerBadge.textContent = 'Offline';
+        headerBadge.className = 'badge badge-secondary';
+      }
+    }
+
+    if (lastTimeBadge && detail.lastSyncTime) {
+      lastTimeBadge.textContent = new Date(detail.lastSyncTime).toLocaleTimeString();
+    }
+  });
+
+  window.addEventListener('setu-sync-history-updated', () => {
+    if (typeof renderMeetingHistory === 'function') {
+      renderMeetingHistory(currentHistoryFilter, historySearchInput?.value || '');
+    }
+  });
+
+  window.addEventListener('setu-sync-contacts-updated', () => {
+    if (typeof window.renderSavedContactsChips === 'function') {
+      window.renderSavedContactsChips();
+    }
+  });
+
+  window.addEventListener('setu-sync-updated', (e) => {
+    const stores = (e.detail && e.detail.stores) || [];
+    if (stores.includes('settings')) {
+      loadUserProfile();
+    }
+    if (stores.includes('history') && typeof renderMeetingHistory === 'function') {
+      renderMeetingHistory(currentHistoryFilter, historySearchInput?.value || '');
     }
   });
 
@@ -1664,6 +2007,13 @@ document.addEventListener('DOMContentLoaded', async () => {
   document.getElementById('mobileMenuPermQrBtn')?.addEventListener('click', () => {
     closeHeaderDropdownMenu();
     openPermanentQr();
+  });
+
+  document.getElementById('mobileMenuSyncBtn')?.addEventListener('click', (e) => {
+    closeHeaderDropdownMenu();
+    if (typeof window.triggerManualSync === 'function') {
+      window.triggerManualSync(e);
+    }
   });
 
   document.getElementById('mobileMenuSettingsBtn')?.addEventListener('click', () => {

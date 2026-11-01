@@ -7,9 +7,10 @@
 class StorageEngine {
   constructor() {
     this.dbName = 'SetuP2P_Storage';
-    this.dbVersion = 4;
+    this.dbVersion = 5;
     this.db = null;
     this.cryptoKey = null; // Derived AES-GCM key if encryption is unlocked
+    this.isSyncApplying = false; // Flag to prevent change recording loopback during remote sync ingestion
   }
 
   _createMissingStores(db) {
@@ -38,6 +39,24 @@ class StorageEngine {
       schedStore.createIndex('startTime', 'startTime', { unique: false });
       schedStore.createIndex('roomCode', 'roomCode', { unique: false });
     }
+    if (!db.objectStoreNames.contains('sync_changelog')) {
+      const chgStore = db.createObjectStore('sync_changelog', { keyPath: 'changeId' });
+      chgStore.createIndex('timestamp', 'timestamp', { unique: false });
+      chgStore.createIndex('status', 'status', { unique: false });
+      chgStore.createIndex('store', 'store', { unique: false });
+    }
+    if (!db.objectStoreNames.contains('sync_tombstones')) {
+      const tombStore = db.createObjectStore('sync_tombstones', { keyPath: 'recordId' });
+      tombStore.createIndex('store', 'store', { unique: false });
+      tombStore.createIndex('deletedAt', 'deletedAt', { unique: false });
+    }
+    if (!db.objectStoreNames.contains('sync_devices')) {
+      const devStore = db.createObjectStore('sync_devices', { keyPath: 'deviceId' });
+      devStore.createIndex('lastSeen', 'lastSeen', { unique: false });
+    }
+    if (!db.objectStoreNames.contains('sync_meta')) {
+      db.createObjectStore('sync_meta', { keyPath: 'key' });
+    }
   }
 
   async init() {
@@ -54,7 +73,7 @@ class StorageEngine {
           this.db = event.target.result;
           
           // Self-healing check: verify all required stores exist
-          const required = ['messages', 'contacts', 'notes', 'settings', 'history', 'schedules'];
+          const required = ['messages', 'contacts', 'notes', 'settings', 'history', 'schedules', 'sync_changelog', 'sync_tombstones', 'sync_devices', 'sync_meta'];
           const missing = required.filter(s => !this.db.objectStoreNames.contains(s));
           if (missing.length > 0) {
             console.warn('[Storage] Missing stores detected (' + missing.join(', ') + '). Performing self-healing upgrade...');
@@ -174,7 +193,10 @@ class StorageEngine {
       const tx = this.db.transaction('messages', 'readwrite');
       const store = tx.objectStore('messages');
       const req = store.put(record);
-      req.onsuccess = () => resolve(record);
+      req.onsuccess = () => {
+        this.recordChange('messages', record.id, 'upsert', record);
+        resolve(record);
+      };
       req.onerror = () => reject(req.error);
     });
   }
@@ -252,7 +274,10 @@ class StorageEngine {
         notes: contact.notes || ''
       };
       const req = store.put(record);
-      req.onsuccess = () => resolve(record);
+      req.onsuccess = () => {
+        this.recordChange('contacts', record.id, 'upsert', record);
+        resolve(record);
+      };
       req.onerror = () => reject(req.error);
     });
   }
@@ -274,7 +299,10 @@ class StorageEngine {
       const tx = this.db.transaction('contacts', 'readwrite');
       const store = tx.objectStore('contacts');
       const req = store.delete(id);
-      req.onsuccess = () => resolve(true);
+      req.onsuccess = () => {
+        this.recordChange('contacts', id, 'delete', null);
+        resolve(true);
+      };
       req.onerror = () => reject(req.error);
     });
   }
@@ -330,7 +358,9 @@ class StorageEngine {
   }
 
   async saveUserProfile(profile) {
-    return await this.setSetting('user_profile', profile);
+    const res = await this.setSetting('user_profile', profile);
+    this.recordChange('settings', 'user_profile', 'upsert', profile);
+    return res;
   }
 
   async getOrCreatePersonalRoomCode() {
@@ -397,6 +427,31 @@ class StorageEngine {
     return await this.setSetting('remote_control_settings', updated);
   }
 
+  // --- Multi-Device Sync Settings ---
+  async getSyncSettings() {
+    return await this.getSetting('multi_device_sync_settings', {
+      enabled: false,
+      endpoint: '',
+      accountId: '',
+      authToken: '',
+      masterPassphrase: '',
+      pollIntervalSec: 15,
+      lastSyncTimestamp: 0,
+      lastSyncCursor: 0,
+      deviceId: '',
+      deviceLabel: ''
+    });
+  }
+
+  async saveSyncSettings(settings) {
+    const current = await this.getSyncSettings();
+    const updated = {
+      ...current,
+      ...settings
+    };
+    return await this.setSetting('multi_device_sync_settings', updated);
+  }
+
   // --- Meeting History Archive ---
   _getFallbackHistory() {
     try {
@@ -452,7 +507,10 @@ class StorageEngine {
           const tx = this.db.transaction('history', 'readwrite');
           const store = tx.objectStore('history');
           const req = store.put(record);
-          req.onsuccess = () => resolve(record);
+          req.onsuccess = () => {
+            this.recordChange('history', record.id, 'upsert', record);
+            resolve(record);
+          };
           req.onerror = () => reject(req.error);
         });
       }
@@ -514,7 +572,10 @@ class StorageEngine {
           const tx = this.db.transaction('history', 'readwrite');
           const store = tx.objectStore('history');
           const req = store.delete(id);
-          req.onsuccess = () => resolve(true);
+          req.onsuccess = () => {
+            this.recordChange('history', id, 'delete', null);
+            resolve(true);
+          };
           req.onerror = () => reject(req.error);
         });
       }
@@ -614,7 +675,10 @@ class StorageEngine {
           const tx = this.db.transaction('schedules', 'readwrite');
           const store = tx.objectStore('schedules');
           const req = store.put(item);
-          req.onsuccess = () => resolve(true);
+          req.onsuccess = () => {
+            this.recordChange('schedules', item.id, 'upsert', item);
+            resolve(true);
+          };
           req.onerror = () => reject(req.error);
         });
       }
@@ -689,7 +753,10 @@ class StorageEngine {
           const tx = this.db.transaction('schedules', 'readwrite');
           const store = tx.objectStore('schedules');
           const req = store.delete(id);
-          req.onsuccess = () => resolve(true);
+          req.onsuccess = () => {
+            this.recordChange('schedules', id, 'delete', null);
+            resolve(true);
+          };
           req.onerror = () => reject(req.error);
         });
       }
@@ -719,6 +786,271 @@ class StorageEngine {
       console.warn('[Storage] Error clearing schedules from IndexedDB:', e);
     }
     return true;
+  }
+
+  // --- Multi-Device Sync Change Tracking & Anti-Replay Ledger ---
+  async getDeviceId() {
+    let devId = localStorage.getItem('setu_sync_device_id');
+    if (!devId) {
+      const isMobile = (typeof navigator !== 'undefined' && /Mobile|Android|iPhone|iPad/i.test(navigator.userAgent));
+      devId = 'dev_' + (isMobile ? 'mob' : 'desk') + '_' + Math.random().toString(36).substring(2, 10);
+      localStorage.setItem('setu_sync_device_id', devId);
+    }
+    return devId;
+  }
+
+  async getNextDeviceSeq() {
+    let seq = parseInt(localStorage.getItem('setu_sync_device_seq') || '0', 10);
+    seq += 1;
+    localStorage.setItem('setu_sync_device_seq', String(seq));
+    return seq;
+  }
+
+  async recordChange(storeName, recordId, action, rawData = null) {
+    if (this.isSyncApplying) return; // Prevent loopback when applying remote deltas
+    try {
+      await this.init();
+      if (!this.db || !this.db.objectStoreNames.contains('sync_changelog')) return;
+
+      const deviceId = await this.getDeviceId();
+      const seq = await this.getNextDeviceSeq();
+      const timestamp = Date.now();
+      const changeId = 'chg_' + timestamp + '_' + Math.random().toString(36).substring(2, 8);
+
+      const entry = {
+        changeId,
+        originDeviceId: deviceId,
+        seq,
+        timestamp,
+        store: storeName,
+        recordId: String(recordId),
+        action, // 'upsert' or 'delete'
+        rawData: action === 'delete' ? null : rawData,
+        status: 'pending' // 'pending' | 'synced'
+      };
+
+      await new Promise((resolve, reject) => {
+        const tx = this.db.transaction('sync_changelog', 'readwrite');
+        const store = tx.objectStore('sync_changelog');
+        const req = store.put(entry);
+        req.onsuccess = () => resolve(entry);
+        req.onerror = () => reject(req.error);
+      });
+
+      if (action === 'delete') {
+        await this.recordTombstone(storeName, recordId, timestamp);
+      }
+
+      // Notify sync engine if active
+      if (typeof window !== 'undefined' && window.setuSyncEngine && typeof window.setuSyncEngine.onLocalChangeRecorded === 'function') {
+        window.setuSyncEngine.onLocalChangeRecorded(entry);
+      }
+    } catch (err) {
+      console.warn('[Storage] recordChange error:', err);
+    }
+  }
+
+  async recordTombstone(storeName, recordId, deletedAt = Date.now()) {
+    try {
+      await this.init();
+      if (!this.db || !this.db.objectStoreNames.contains('sync_tombstones')) return;
+      await new Promise((resolve, reject) => {
+        const tx = this.db.transaction('sync_tombstones', 'readwrite');
+        const store = tx.objectStore('sync_tombstones');
+        const req = store.put({
+          recordId: String(recordId),
+          store: storeName,
+          deletedAt
+        });
+        req.onsuccess = () => resolve(true);
+        req.onerror = () => reject(req.error);
+      });
+    } catch (err) {
+      console.warn('[Storage] recordTombstone error:', err);
+    }
+  }
+
+  async isTombstoned(recordId, incomingTimestamp = 0) {
+    try {
+      await this.init();
+      if (!this.db || !this.db.objectStoreNames.contains('sync_tombstones')) return false;
+      return await new Promise((resolve) => {
+        const tx = this.db.transaction('sync_tombstones', 'readonly');
+        const store = tx.objectStore('sync_tombstones');
+        const req = store.get(String(recordId));
+        req.onsuccess = () => {
+          if (!req.result) return resolve(false);
+          resolve(req.result.deletedAt >= incomingTimestamp);
+        };
+        req.onerror = () => resolve(false);
+      });
+    } catch (_) {
+      return false;
+    }
+  }
+
+  async getPendingChanges(limit = 100) {
+    try {
+      await this.init();
+      if (!this.db || !this.db.objectStoreNames.contains('sync_changelog')) return [];
+      return await new Promise((resolve) => {
+        const tx = this.db.transaction('sync_changelog', 'readonly');
+        const store = tx.objectStore('sync_changelog');
+        const index = store.index('status');
+        const req = index.getAll(IDBKeyRange.only('pending'));
+        req.onsuccess = () => {
+          const list = (req.result || []).slice(0, limit);
+          resolve(list);
+        };
+        req.onerror = () => resolve([]);
+      });
+    } catch (e) {
+      return [];
+    }
+  }
+
+  async markChangesSynced(changeIds, serverCursor = 0) {
+    if (!changeIds || changeIds.length === 0) return;
+    try {
+      await this.init();
+      if (!this.db || !this.db.objectStoreNames.contains('sync_changelog')) return;
+      await new Promise((resolve) => {
+        const tx = this.db.transaction('sync_changelog', 'readwrite');
+        const store = tx.objectStore('sync_changelog');
+        let done = 0;
+        changeIds.forEach(id => {
+          const getReq = store.get(id);
+          getReq.onsuccess = () => {
+            if (getReq.result) {
+              getReq.result.status = 'synced';
+              getReq.result.serverCursor = serverCursor;
+              store.put(getReq.result);
+            }
+            done++;
+            if (done === changeIds.length) resolve(true);
+          };
+          getReq.onerror = () => {
+            done++;
+            if (done === changeIds.length) resolve(true);
+          };
+        });
+      });
+    } catch (e) {
+      console.warn('[Storage] markChangesSynced error:', e);
+    }
+  }
+
+  /**
+   * Scans all local records in history, contacts, schedules, and settings.
+   * If any record is not in sync_changelog (or was marked synced with serverCursor <= 0),
+   * enqueues it as a pending change so it pushes to the sync server.
+   */
+  async ensureAllRecordsEnqueuedForSync() {
+    if (this.isSyncApplying) return 0;
+    try {
+      await this.init();
+      if (!this.db || !this.db.objectStoreNames.contains('sync_changelog')) return 0;
+
+      // 1. Get existing change entries mapped by store:recordId
+      const existingMap = await new Promise((resolve) => {
+        const tx = this.db.transaction('sync_changelog', 'readonly');
+        const store = tx.objectStore('sync_changelog');
+        const req = store.getAll();
+        req.onsuccess = () => {
+          const map = new Map();
+          (req.result || []).forEach(entry => {
+            const key = `${entry.store}:${entry.recordId}`;
+            // If already pending or synced with a real server cursor > 0, consider it enqueued
+            if (entry.status === 'pending' || (entry.status === 'synced' && entry.serverCursor > 0)) {
+              map.set(key, true);
+            }
+          });
+          resolve(map);
+        };
+        req.onerror = () => resolve(new Map());
+      });
+
+      let enqueuedCount = 0;
+
+      // 2. Check history (meetings)
+      const meetings = await this.getAllMeetings();
+      for (const m of meetings) {
+        if (!m || !m.id) continue;
+        const key = `history:${m.id}`;
+        if (!existingMap.has(key)) {
+          await this.recordChange('history', m.id, 'upsert', m);
+          enqueuedCount++;
+        }
+      }
+
+      // 3. Check schedules
+      const schedules = await this.getAllSchedules();
+      for (const s of schedules) {
+        if (!s || !s.id) continue;
+        const key = `schedules:${s.id}`;
+        if (!existingMap.has(key)) {
+          await this.recordChange('schedules', s.id, 'upsert', s);
+          enqueuedCount++;
+        }
+      }
+
+      // 4. Check contacts
+      const contacts = await this.getContacts();
+      for (const c of contacts) {
+        if (!c || !c.id) continue;
+        const key = `contacts:${c.id}`;
+        if (!existingMap.has(key)) {
+          await this.recordChange('contacts', c.id, 'upsert', c);
+          enqueuedCount++;
+        }
+      }
+
+      // 5. Check messages
+      const messages = await this.getMessages();
+      for (const msg of messages) {
+        if (!msg || !msg.id) continue;
+        const key = `messages:${msg.id}`;
+        if (!existingMap.has(key)) {
+          await this.recordChange('messages', msg.id, 'upsert', msg);
+          enqueuedCount++;
+        }
+      }
+
+      // 6. Check user profile
+      const profile = await this.getUserProfile();
+      if (profile) {
+        const key = 'settings:user_profile';
+        if (!existingMap.has(key)) {
+          await this.recordChange('settings', 'user_profile', 'upsert', profile);
+          enqueuedCount++;
+        }
+      }
+
+      return enqueuedCount;
+    } catch (err) {
+      console.warn('[Storage] ensureAllRecordsEnqueuedForSync error:', err);
+      return 0;
+    }
+  }
+
+  async pruneTombstones(maxAgeMs = 30 * 24 * 3600 * 1000) {
+    try {
+      await this.init();
+      if (!this.db || !this.db.objectStoreNames.contains('sync_tombstones')) return;
+      const cutoff = Date.now() - maxAgeMs;
+      const tx = this.db.transaction('sync_tombstones', 'readwrite');
+      const store = tx.objectStore('sync_tombstones');
+      const index = store.index('deletedAt');
+      const range = IDBKeyRange.upperBound(cutoff);
+      const req = index.openCursor(range);
+      req.onsuccess = (e) => {
+        const cursor = e.target.result;
+        if (cursor) {
+          cursor.delete();
+          cursor.continue();
+        }
+      };
+    } catch (e) {}
   }
 
   // --- Export and Panic Wipe ---

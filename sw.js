@@ -5,7 +5,7 @@
  * Zero emojis in code and comments.
  */
 
-const CACHE_NAME = 'setu-p2p-v3';
+const CACHE_NAME = 'setu-p2p-v12';
 
 const STATIC_SHELL_ASSETS = [
   './',
@@ -34,6 +34,8 @@ const STATIC_SHELL_ASSETS = [
   'assets/js/remote-control.js',
   'assets/js/device-test.js',
   'assets/js/schedule.js',
+  'assets/js/sync-crypto.js',
+  'assets/js/sync-engine.js',
   'assets/js/app.js'
 ];
 

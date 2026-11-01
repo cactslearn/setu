@@ -4016,3 +4016,19 @@ html {
     display: block !important;
   }
 }
+
+
+/* Multi-Device Sync Spin Animation */
+.tool-icon-btn.sync-spinning svg,
+.header-menu-item.sync-spinning svg {
+  animation: sync-rotate-spin 0.85s linear infinite;
+}
+
+@keyframes sync-rotate-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}

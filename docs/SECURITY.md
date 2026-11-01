@@ -12,6 +12,9 @@
 | **Payload Integrity** | Adler-32 Checksum | 32-bit checksum | Detect copy-paste truncation |
 | **Remote Control Auth** | WebCrypto CSPRNG | 128-bit entropy (`setu_sec_...`) | Host companion daemon auth |
 | **Room Code Validation** | Strict Regex Pattern | `^SETU-[A-Z0-9]{4}-[A-Z0-9]{4}$` | API room code validation |
+| **Multi-Device Sync Encryption** | WebCrypto PBKDF2 + AES-256-GCM | 600k rounds + 256-bit key | Zero-knowledge cross-device sync |
+| **Sync Non-Repudiation** | WebCrypto ECDSA P-256 | Asymmetric NIST P-256 curve | Signed record change envelopes |
+| **Sync Metadata Blinding** | WebCrypto HMAC-SHA256 | 256-bit blinding key | Blinded store names & record IDs |
 
 ---
 
@@ -54,5 +57,22 @@
 - **Threat:** Exposure of connection metadata or eavesdropping on intermediate signaling gateways.
 - **Mitigation:**
   - Offer/answer payloads transmitted via the optional API signaling gateway contain only ephemeral SDP routing data and DTLS certificate hashes. Media and chat never touch the gateway.
+  - SDP payloads are end-to-end encrypted with AES-GCM-256 before transmission using the room code as key material; the signaling server never sees plaintext session descriptions.
   - Signaling polling is terminated immediately once the peer connection transitions to the connected state.
+  - **Secret Key Authorization via Script Properties:** Serverless Google Apps Script endpoints enforce authorization using `SECRET_KEY` stored in **Project Settings -> Script Properties**. No authorization tokens or secrets are ever stored in script code or client bundles.
+
+### 2.6 Multi-Device Synchronization Security & Threat Model
+- **Threat 1: Server-Side Data Inspection or Tampering**
+  - An untrusted server host attempts to read user contacts, schedules, or meeting history, or tamper with records in transit.
+  - **Mitigation:**
+    1. Zero-knowledge envelope encryption: All data is encrypted with AES-256-GCM using keys derived on-device (PBKDF2 with 600,000 iterations + HKDF-SHA256).
+    2. Digital signatures: Every device holds an asymmetric ECDSA P-256 keypair; outgoing change envelopes are signed with the device private key. Tampered records fail cryptographic signature verification on receiving devices and are discarded.
+    3. Metadata blinding: Store names and record IDs are blinded via HMAC-SHA256; the server cannot identify what tables or records are being modified.
+    4. Random bucket padding: Uniform payload padding (512 B, 2 KB, 8 KB, 32 KB, 128 KB) defeats traffic analysis and record size pattern fingerprinting.
+- **Threat 2: Unauthorized Cloud Storage Access**
+  - Malicious parties attempt to read or overwrite synchronization storage on Google Apps Script.
+  - **Mitigation:**
+    1. Storage is strictly isolated to a designated Google Drive folder configured in **Project Settings -> Script Properties** (`SYNC_FOLDER_ID`), preventing full-drive access.
+    2. Endpoint requests are authenticated against `SECRET_KEY` in Script Properties; unauthorized requests are rejected immediately.
+    3. For complete specifications, see [docs/SYNC_SPEC.md](SYNC_SPEC.md).
 

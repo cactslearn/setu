@@ -84,9 +84,7 @@ self.addEventListener('fetch', (event) => {
     url.protocol === 'ws:' ||
     url.protocol === 'wss:' ||
     url.hostname.includes('broker.') ||
-    url.hostname.includes('mqtt') ||
-    url.hostname.includes('fonts.googleapis.com') ||
-    url.hostname.includes('fonts.gstatic.com')
+    url.hostname.includes('mqtt')
   ) {
     return;
   }

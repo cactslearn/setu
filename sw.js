@@ -5,7 +5,7 @@
  * Zero emojis in code and comments.
  */
 
-const CACHE_NAME = 'setu-p2p-v14';
+const CACHE_NAME = 'setu-p2p-v15';
 
 const STATIC_SHELL_ASSETS = [
   './',

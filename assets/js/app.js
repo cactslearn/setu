@@ -2125,8 +2125,35 @@ document.addEventListener('DOMContentLoaded', async () => {
   const pwaInstallBtn = document.getElementById('pwaInstallBtn');
   const welcomeInstallPwaBtn = document.getElementById('welcomeInstallPwaBtn');
 
+  function isRunningStandalonePwa() {
+    try {
+      return (
+        window.matchMedia('(display-mode: standalone)').matches ||
+        window.matchMedia('(display-mode: window-controls-overlay)').matches ||
+        window.navigator.standalone === true ||
+        (document.referrer && document.referrer.includes('android-app://')) ||
+        new URLSearchParams(window.location.search).get('mode') === 'pwa'
+      );
+    } catch (_) {
+      return false;
+    }
+  }
+
+  function applyPwaDisplayState() {
+    const isStandalone = isRunningStandalonePwa();
+    if (isStandalone) {
+      document.documentElement.classList.add('is-pwa-standalone');
+      document.body.classList.add('is-pwa-standalone');
+    } else {
+      document.documentElement.classList.remove('is-pwa-standalone');
+      document.body.classList.remove('is-pwa-standalone');
+    }
+    updateInstallButtonsVisibility(!isStandalone && !!deferredInstallPrompt);
+    return isStandalone;
+  }
+
   function updateInstallButtonsVisibility(show) {
-    const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+    const isStandalone = isRunningStandalonePwa();
     const shouldDisplay = show && !isStandalone;
 
     if (pwaInstallBtn) {
@@ -2141,10 +2168,19 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   }
 
+  applyPwaDisplayState();
+
+  try {
+    const standaloneMedia = window.matchMedia('(display-mode: standalone)');
+    if (standaloneMedia && standaloneMedia.addEventListener) {
+      standaloneMedia.addEventListener('change', applyPwaDisplayState);
+    }
+  } catch (_) {}
+
   window.addEventListener('beforeinstallprompt', (e) => {
     e.preventDefault();
     deferredInstallPrompt = e;
-    updateInstallButtonsVisibility(true);
+    applyPwaDisplayState();
   });
 
   async function triggerPwaInstall() {
@@ -2157,7 +2193,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       }
     } catch (_) {}
     deferredInstallPrompt = null;
-    updateInstallButtonsVisibility(false);
+    applyPwaDisplayState();
   }
 
   pwaInstallBtn?.addEventListener('click', triggerPwaInstall);
@@ -2165,7 +2201,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   window.addEventListener('appinstalled', () => {
     deferredInstallPrompt = null;
-    updateInstallButtonsVisibility(false);
+    applyPwaDisplayState();
     if (window.showToast) window.showToast('Setu P2P installed successfully');
   });
 

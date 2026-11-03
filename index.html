@@ -147,8 +147,24 @@
   </script>
 
   <!-- CSS Stylesheet -->
-  <link rel="preload" href="assets/css/app.css?v=14" as="style">
-  <link rel="stylesheet" href="assets/css/app.css?v=14">
+  <link rel="preload" href="assets/css/app.css?v=15" as="style">
+  <link rel="stylesheet" href="assets/css/app.css?v=15">
+
+  <!-- Early PWA Standalone Detection (Prevents Flash of Promotional Content) -->
+  <script>
+    (function () {
+      try {
+        var isStandalone = window.matchMedia('(display-mode: standalone)').matches ||
+          window.matchMedia('(display-mode: window-controls-overlay)').matches ||
+          window.navigator.standalone === true ||
+          (document.referrer && document.referrer.includes('android-app://')) ||
+          new URLSearchParams(window.location.search).get('mode') === 'pwa';
+        if (isStandalone) {
+          document.documentElement.classList.add('is-pwa-standalone');
+        }
+      } catch (e) {}
+    })();
+  </script>
 </head>
 <body>
 
@@ -379,8 +395,10 @@
           <div id="contactsChipsList" style="display: flex; flex-wrap: wrap; gap: 0.45rem;"></div>
         </div>
 
-        <!-- Fast-Jump Navigation Pills -->
-        <nav class="welcome-nav-pills" aria-label="Page Sections Navigation">
+        <!-- Promotional & Marketing Content (Visible in browser, hidden when running as installed PWA app) -->
+        <div id="promotionalMarketingContent" class="promotional-marketing-content pwa-hide-marketing">
+          <!-- Fast-Jump Navigation Pills -->
+          <nav class="welcome-nav-pills" aria-label="Page Sections Navigation">
           <a href="#welcomeHeading" class="nav-pill-btn">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>
             <span>Try Setu</span>
@@ -802,6 +820,7 @@
             <a href="llms.txt">llms.txt</a>
           </nav>
         </footer>
+        </div>
       </div>
     </section>
 
@@ -2369,6 +2388,6 @@
   <script defer src="assets/js/schedule.js"></script>
   <script defer src="assets/js/sync-crypto.js?v=14"></script>
   <script defer src="assets/js/sync-engine.js?v=14"></script>
-  <script defer src="assets/js/app.js?v=14"></script>
+  <script defer src="assets/js/app.js?v=15"></script>
 </body>
 </html>

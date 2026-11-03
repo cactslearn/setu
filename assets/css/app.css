@@ -4032,3 +4032,54 @@ html {
     transform: rotate(360deg);
   }
 }
+
+/* ========================================================== */
+/* Promotional & Marketing Content (PWA App vs Browser Mode)  */
+/* ========================================================== */
+
+.promotional-marketing-content {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.25rem;
+}
+
+/* Hide promotional, marketing, and install content when running as installed PWA app */
+@media (display-mode: standalone), (display-mode: window-controls-overlay) {
+  .promotional-marketing-content,
+  .pwa-hide-marketing {
+    display: none !important;
+  }
+
+  #pwaInstallBtn,
+  #welcomeInstallPwaBtn,
+  #mobileMenuInstallBtn {
+    display: none !important;
+  }
+
+  .welcome-container {
+    padding-bottom: 2.5rem;
+  }
+}
+
+body.is-pwa-standalone .promotional-marketing-content,
+body.is-pwa-standalone .pwa-hide-marketing,
+html.is-pwa-standalone .promotional-marketing-content,
+html.is-pwa-standalone .pwa-hide-marketing {
+  display: none !important;
+}
+
+body.is-pwa-standalone #pwaInstallBtn,
+body.is-pwa-standalone #welcomeInstallPwaBtn,
+body.is-pwa-standalone #mobileMenuInstallBtn,
+html.is-pwa-standalone #pwaInstallBtn,
+html.is-pwa-standalone #welcomeInstallPwaBtn,
+html.is-pwa-standalone #mobileMenuInstallBtn {
+  display: none !important;
+}
+
+body.is-pwa-standalone .welcome-container {
+  padding-bottom: 2.5rem;
+}
+

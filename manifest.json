@@ -2,7 +2,7 @@
   "name": "Setu P2P - Secure Meetings & Remote Assistance",
   "short_name": "Setu P2P",
   "description": "Serverless WebRTC video conferencing, screen sharing, and remote assistance platform with local-first privacy.",
-  "start_url": "./index.html",
+  "start_url": "./index.html?mode=pwa",
   "scope": "./",
   "display": "standalone",
   "orientation": "any",
@@ -40,7 +40,7 @@
       "name": "New Meeting",
       "short_name": "New Call",
       "description": "Start an instant peer-to-peer video meeting",
-      "url": "./index.html#host",
+      "url": "./index.html?mode=pwa#host",
       "icons": [
         {
           "src": "assets/icons/icon-192.svg",
@@ -53,7 +53,7 @@
       "name": "Schedule Room",
       "short_name": "Schedule",
       "description": "Schedule a meeting room and export calendar invitations",
-      "url": "./index.html#schedule",
+      "url": "./index.html?mode=pwa#schedule",
       "icons": [
         {
           "src": "assets/icons/icon-192.svg",
